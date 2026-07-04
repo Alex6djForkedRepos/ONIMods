@@ -29,10 +29,11 @@ namespace PeterHan.FastTrack.VisualPatches {
 		/// Applied before AddBlock runs.
 		/// </summary>
 		private static bool AddBlock_Prefix(int renderLayer, BuildingDef def,
-				bool isReplacement, SimHashes element, int cell) {
-			TileMeshRenderer.Instance?.AddBlock(renderLayer, def, isReplacement, element,
-				cell);
-			return false;
+				bool isReplacement, SimHashes element, int cell, bool isBlueprint) {
+			var inst = TileMeshRenderer.Instance;
+			if (inst != null)
+				inst.AddBlock(renderLayer, def, isReplacement, element, cell, isBlueprint);
+			return inst == null;
 		}
 
 		/// <summary>
@@ -40,26 +41,33 @@ namespace PeterHan.FastTrack.VisualPatches {
 		/// </summary>
 		/// <param name="harmony">The Harmony instance to use for patching.</param>
 		internal static void Apply(Harmony harmony) {
+			var btr = typeof(BlockTileRenderer);
 			if (FastTrackOptions.Instance.NoTileDecor)
 				harmony.Patch(typeof(Assets), nameof(Assets.GetBlockTileDecorInfo),
 					prefix: new HarmonyMethod(typeof(TileMeshPatches),
 					nameof(GetBlockTileDecorInfo_Prefix)));
-			harmony.Patch(typeof(BlockTileRenderer), nameof(BlockTileRenderer.AddBlock),
-				prefix: new HarmonyMethod(typeof(TileMeshPatches), nameof(AddBlock_Prefix)));
-			harmony.Patch(typeof(BlockTileRenderer), nameof(BlockTileRenderer.HighlightCell),
+			var addBlock = btr.GetMethodSafe(nameof(BlockTileRenderer.AddBlock),
+				false, typeof(int), typeof(BuildingDef), typeof(bool), typeof(SimHashes),
+				typeof(int), typeof(bool));
+			if (addBlock != null)
+				harmony.Patch(addBlock, prefix: new HarmonyMethod(typeof(TileMeshPatches),
+					nameof(AddBlock_Prefix)));
+			else
+				PUtil.LogWarning("Unable to patch BlockTileRenderer.AddBlock");
+			harmony.Patch(btr, nameof(BlockTileRenderer.HighlightCell),
 				prefix: new HarmonyMethod(typeof(TileMeshPatches), nameof(
 				HighlightCell_Prefix)));
-			harmony.Patch(typeof(BlockTileRenderer), nameof(BlockTileRenderer.LateUpdate),
+			harmony.Patch(btr, nameof(BlockTileRenderer.LateUpdate),
 				prefix: new HarmonyMethod(typeof(TileMeshPatches), nameof(LateUpdate_Prefix)));
-			harmony.Patch(typeof(BlockTileRenderer), nameof(BlockTileRenderer.Rebuild),
+			harmony.Patch(btr, nameof(BlockTileRenderer.Rebuild),
 				prefix: new HarmonyMethod(typeof(TileMeshPatches), nameof(Rebuild_Prefix)));
-			harmony.Patch(typeof(BlockTileRenderer), nameof(BlockTileRenderer.RemoveBlock),
+			harmony.Patch(btr, nameof(BlockTileRenderer.RemoveBlock),
 				prefix: new HarmonyMethod(typeof(TileMeshPatches), nameof(
 				RemoveBlock_Prefix)));
-			harmony.Patch(typeof(BlockTileRenderer), nameof(BlockTileRenderer.SelectCell),
+			harmony.Patch(btr, nameof(BlockTileRenderer.SelectCell),
 				prefix: new HarmonyMethod(typeof(TileMeshPatches), nameof(
 				SelectCell_Prefix)));
-			harmony.Patch(typeof(BlockTileRenderer), nameof(BlockTileRenderer.
+			harmony.Patch(btr, nameof(BlockTileRenderer.
 				SetInvalidPlaceCell), prefix: new HarmonyMethod(typeof(TileMeshPatches),
 				nameof(SetInvalidPlaceCell_Prefix)));
 			harmony.Patch(typeof(World), nameof(World.OnPrefabInit), postfix:

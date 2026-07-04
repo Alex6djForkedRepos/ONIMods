@@ -435,8 +435,10 @@ namespace PeterHan.FastTrack.VisualPatches {
 		/// </summary>
 		/// <param name="def">The building def to render.</param>
 		/// <param name="element">The element which was used to build it.</param>
+		/// <param name="isBlueprint">Whether the tile is part of a blueprint.</param>
 		/// <returns>The material to use for the mesh renderers.</returns>
-		public static Material GetMaterial(this BuildingDef def, SimHashes element) {
+		public static Material GetMaterial(this BuildingDef def, SimHashes element,
+				bool isBlueprint) {
 			var material = GetBaseMaterial(def);
 			if (element != SimHashes.Void) {
 				material.SetTexture("_MainTex", def.BlockTileAtlas.texture);
@@ -451,6 +453,10 @@ namespace PeterHan.FastTrack.VisualPatches {
 				material.name = def.BlockTilePlaceAtlas.name + "Mat";
 				material.DisableKeyword(SHINE);
 			}
+			var blendOptions = def.BlockTileBlendOptions;
+			if (isBlueprint)
+				blendOptions |= TilesBlendActiveOptions.Transparent;
+			material.SetFloat("_packedParameters", (float)blendOptions);
 			return material;
 		}
 

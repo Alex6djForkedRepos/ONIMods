@@ -137,6 +137,24 @@ namespace PeterHan.FastTrack.UIPatches {
 	}
 
 	/// <summary>
+	/// Applied to MinionTodoSideScreen to bypass code that redrew the screen every frame,
+	/// which reduced performance and caused flicker (as it can race with background chore
+	/// calculations).
+	/// </summary>
+	[HarmonyPatch(typeof(MinionTodoSideScreen), nameof(MinionTodoSideScreen.ScreenUpdate))]
+	public static class MinionTodoSideScreen_ScreenUpdate_Patch {
+		internal static bool Prepare() => FastTrackOptions.Instance.SideScreenOpts;
+
+		/// <summary>
+		/// Applied before ScreenUpdate runs.
+		/// </summary>
+		[HarmonyPriority(Priority.Low)]
+		internal static bool Prefix(MinionTodoSideScreen __instance) {
+			return false;
+		}
+	}
+
+	/// <summary>
 	/// Applied to TimerSideScreen to only update the side screen if it is active.
 	/// </summary>
 	[HarmonyPatch(typeof(TimerSideScreen), nameof(TimerSideScreen.RenderEveryTick))]

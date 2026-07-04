@@ -51,7 +51,8 @@ namespace PeterHan.FastTrack.VisualPatches {
 		/// The property types to turn off every-frame rendering.
 		/// </summary>
 		private static readonly IList<SimProperty> REDUCE_PROPERTIES = new List<SimProperty> {
-			SimProperty.SolidDigAmount, SimProperty.SolidLiquidGasMass
+			SimProperty.SolidDigAmount, SimProperty.SolidLiquidGasMass,
+			SimProperty.SolidLiquidGasMassForLight
 		};
 
 		/// <summary>
@@ -139,6 +140,7 @@ namespace PeterHan.FastTrack.VisualPatches {
 		/// <summary>
 		/// References IDs for updating shader texture properties.
 		/// </summary>
+		private readonly int tIDCameraZoom;
 		private readonly int tIDClusterWorldSize;
 		private readonly int tIDFogOfWarScale;
 		private readonly int tIDTopBorderHeight;
@@ -147,6 +149,7 @@ namespace PeterHan.FastTrack.VisualPatches {
 		private PropertyTextureUpdater() {
 			var tIDPropTexWsToCs = Shader.PropertyToID("_PropTexWsToCs");
 			var tIDPropTexCsToWs = Shader.PropertyToID("_PropTexCsToWs");
+			tIDCameraZoom = Shader.PropertyToID("_CameraZoomInfo");
 			tIDClusterWorldSize = Shader.PropertyToID("_ClusterWorldSizeInfo");
 			tIDFogOfWarScale = Shader.PropertyToID("_FogOfWarScale");
 			tIDTopBorderHeight = Shader.PropertyToID("_TopBorderHeight");
@@ -179,13 +182,13 @@ namespace PeterHan.FastTrack.VisualPatches {
 				Vector4 clusterSize;
 				var worldOffset = activeWorld.WorldOffset;
 				var worldSize = activeWorld.WorldSize;
+				var cc = CameraController.Instance;
 				Shader.SetGlobalVector(tIDWorldSize, new Vector4(w, h, 1.0f / w, 1.0f / h));
-				if (DlcManager.IsPureVanilla() || (CameraController.Instance != null &&
-						CameraController.Instance.ignoreClusterFX))
+				if (DlcManager.IsPureVanilla() || (cc != null && cc.ignoreClusterFX))
 					clusterSize = new Vector4(w, h, 0f, 0f);
 				else
-					clusterSize = new Vector4(worldSize.x, worldSize.y, worldOffset.x,
-						worldOffset.y);
+					clusterSize = new Vector4(worldSize.x, worldSize.y - activeWorld.
+						HiddenYOffset, worldOffset.x, worldOffset.y);
 				Shader.SetGlobalVector(tIDClusterWorldSize, clusterSize);
 				Shader.SetGlobalFloat(tIDTopBorderHeight, activeWorld.FullyEnclosedBorder ?
 					0f : Grid.TopBorderHeight);
@@ -283,6 +286,7 @@ namespace PeterHan.FastTrack.VisualPatches {
 			if (outstanding > 0 && !onComplete.WaitOne(FastTrackMod.MAX_TIMEOUT))
 				PUtil.LogWarning("Property textures did not update within the timeout!");
 			DisposeAll();
+			UpdateCameraZoom();
 			if (lerpers != null && !FullScreenDialogPatches.DialogVisible) {
 				int n = lerpers.Length;
 				for (int i = 0; i < n; i++) {
@@ -417,6 +421,9 @@ namespace PeterHan.FastTrack.VisualPatches {
 			case SimProperty.LiquidData:
 				UpdateSimProperty(p, PropertyTextures.externalLiquidDataTex, 4 * cells);
 				break;
+			case SimProperty.MaterialData:
+				UpdateSimProperty(p, PropertyTextures.externalMaterialDataTex, 4 * cells);
+				break;
 			default:
 				if (p < buffers.Length)
 					StartTextureUpdate(property, buffers[p], min, max);
@@ -435,6 +442,21 @@ namespace PeterHan.FastTrack.VisualPatches {
 				var texture = external[index];
 				texture.LoadRawTextureData(simTexture, size);
 				texture.Apply();
+			}
+		}
+
+		/// <summary>
+		/// Updates the camera zoom.
+		/// </summary>
+		private void UpdateCameraZoom() {
+			var cc = CameraController.Instance;
+			if (cc != null) {
+				float size = cc.OrthographicSize, minSize = cc.minOrthographicSize,
+				// Could not find the appropriate constant in the C code for "20.0f"
+					z = cc.FreeCameraEnabled ? TuningData<CameraController.Tuning>.
+						Get().maxOrthographicSizeDebug : 20.0f;
+				Shader.SetGlobalVector(tIDCameraZoom, new Vector4(size, cc.overlayCamera.
+					aspect, z, (size - minSize) / (z - minSize)));
 			}
 		}
 

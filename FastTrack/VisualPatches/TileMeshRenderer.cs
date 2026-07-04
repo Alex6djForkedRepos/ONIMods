@@ -119,8 +119,9 @@ namespace PeterHan.FastTrack.VisualPatches {
 		/// <param name="isReplacement">true if replacing another item, or false otherwise.</param>
 		/// <param name="element">The element used to build the def.</param>
 		/// <param name="cell">The cell the building will occupy.</param>
+		/// <param name="isBlueprint">Whether the tile is part of a blueprint.</param>
 		public void AddBlock(int renderLayer, BuildingDef def, bool isReplacement,
-				SimHashes element, int cell) {
+				SimHashes element, int cell, bool isBlueprint) {
 			int layer = (int)BlockTileRenderer.GetRenderInfoLayer(isReplacement, element);
 			// If building never seen before
 			if (!renderInfo.TryGetValue(def, out TileRenderInfo infoForTile))
@@ -130,7 +131,7 @@ namespace PeterHan.FastTrack.VisualPatches {
 			// Create the layer if not yet populated
 			var info = infos[layer];
 			if (info == null) {
-				info = new LayerRenderInfo(queryLayer, renderLayer, def, element);
+				info = new LayerRenderInfo(queryLayer, renderLayer, def, element, isBlueprint);
 				infos[layer] = info;
 			}
 			info.AddCell(cell);
@@ -359,14 +360,14 @@ namespace PeterHan.FastTrack.VisualPatches {
 			private readonly Material renderMaterial;
 
 			public LayerRenderInfo(int queryLayer, int renderLayer, BuildingDef def,
-					SimHashes element) {
+					SimHashes element, bool isBlueprint) {
 				int width = Grid.WidthInCells / CHUNK_SIZE + 1;
 				int height = Grid.HeightInCells / CHUNK_SIZE + 1;
 				float z = Grid.GetLayerZ(def.SceneLayer);
 				this.queryLayer = queryLayer;
 				this.element = element;
 				occupiedCells = new Dictionary<int, int>(CHUNK_SIZE * CHUNK_SIZE / 4);
-				renderMaterial = def.GetMaterial(element);
+				renderMaterial = def.GetMaterial(element, isBlueprint);
 				renderChunks = new MeshChunk[width, height];
 				for (int x = 0; x < width; x++)
 					for (int y = 0; y < height; y++)

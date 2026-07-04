@@ -162,6 +162,8 @@ namespace PeterHan.FastTrack.GamePatches {
 				geyserType = null;
 			}
 			__result = geyserType;
+			// No evidence that loading geysers happens on a background thread, as all places
+			// that use FindType can only run on the main thread
 			return false;
 		}
 	}

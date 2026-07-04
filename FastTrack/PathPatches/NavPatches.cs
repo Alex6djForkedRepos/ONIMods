@@ -18,6 +18,7 @@
 
 using HarmonyLib;
 using PeterHan.PLib.Core;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -66,7 +67,7 @@ namespace PeterHan.FastTrack.PathPatches {
 				if (consumer != null && !consumer.consumerState.hasSolidTransferArm) {
 					var nav = consumer.navigator;
 					if (nav != null)
-						PathCacher.SetValid(nav.PathGrid, false);
+						PathCacher.Cleanup(nav.PathGrid);
 				}
 			});
 		}
@@ -86,7 +87,45 @@ namespace PeterHan.FastTrack.PathPatches {
 		/// </summary>
 		internal static void Prefix(Navigator navigator) {
 			if (navigator != null)
-				PathCacher.SetValid(navigator.PathGrid, false);
+				PathCacher.Cleanup(navigator.PathGrid);
+		}
+	}
+
+	/// <summary>
+	/// Applied to NavGrid's constructor to cause validator failures to dirty associated
+	/// PathGrids.
+	/// </summary>
+	[HarmonyPatch(typeof(NavGrid), MethodType.Constructor, typeof(string),
+		typeof(NavGrid.Transition[]), typeof(NavGrid.NavTypeData[]), typeof(CellOffset[]),
+		typeof(NavTableValidator[]), typeof(int), typeof(int), typeof(int))]
+	public static class NavGrid_Constructor_Patch {
+		/// <summary>
+		/// Applied after the constructor runs.
+		/// </summary>
+		internal static void Postfix(NavTableValidator[] validators) {
+			int n = validators.Length;
+			for (int i = 0; i < n; i++) {
+				var v = validators[i];
+				if (v != null)
+					v.onDirty += Pathfinding_AddDirtyNavGridCell_Patch.Postfix;
+			}
+		}
+	}
+
+	/// <summary>
+	/// Applied to NavGrid to replace the default UpdateGraph method with one that deduplicates
+	/// dirty cells much faster.
+	/// </summary>
+	[HarmonyPatch(typeof(NavGrid), nameof(NavGrid.UpdateGraph), new System.Type[0])]
+	public static class NavGrid_UpdateGraph_Patch {
+		internal static bool Prepare() => FastTrackOptions.Instance.CachePaths;
+
+		/// <summary>
+		/// Applied before UpdateGraph runs.
+		/// </summary>
+		internal static bool Prefix(NavGrid __instance) {
+			NavGridGraphUpdater.Instance?.UpdateGraph(__instance);
+			return false;
 		}
 	}
 
@@ -123,7 +162,7 @@ namespace PeterHan.FastTrack.PathPatches {
 		/// <param name="instance">The navigator to invalidate.</param>
 		private static void ForceInvalid(Navigator instance) {
 			if (instance != null)
-				PathCacher.SetValid(instance.PathGrid, false);
+				PathCacher.Cleanup(instance.PathGrid);
 		}
 
 		/// <summary>
@@ -182,6 +221,22 @@ namespace PeterHan.FastTrack.PathPatches {
 				PUtil.LogWarning("Unable to patch Navigator.AdvancePath");
 		}
 	}
+	
+	/// <summary>
+	/// Applied to Navigator to remove the path grid from the cache when it is destroyed.
+	/// </summary>
+	[HarmonyPatch(typeof(Navigator), nameof(Navigator.OnCleanUp))]
+	public static class Navigator_OnCleanUp_Patch {
+		internal static bool Prepare() => FastTrackOptions.Instance.CachePaths;
+
+		/// <summary>
+		/// Applied before OnCleanUp runs.
+		/// </summary>
+		internal static void Prefix(Navigator __instance) {
+			if (__instance != null)
+				PathCacher.Cleanup(__instance.PathGrid);
+		}
+	}
 
 	/// <summary>
 	/// Applied to Navigator to force update the path cache once when the navigator is forced
@@ -196,7 +251,7 @@ namespace PeterHan.FastTrack.PathPatches {
 		/// </summary>
 		internal static void Postfix(Navigator __instance, bool arrived_at_destination) {
 			if (__instance != null && !arrived_at_destination)
-				PathCacher.SetValid(__instance.PathGrid, false);
+				PathCacher.Cleanup(__instance.PathGrid);
 		}
 	}
 
@@ -217,6 +272,23 @@ namespace PeterHan.FastTrack.PathPatches {
 			if (miss)
 				__result = null;
 			return miss;
+		}
+	}
+
+	/// <summary>
+	/// Applied to Pathfinding to invalidate path caches in range of a dirty nav grid cell
+	/// caused by solid changes and so forth.
+	/// </summary>
+	[HarmonyPatch(typeof(Pathfinding), nameof(Pathfinding.AddDirtyNavGridCell))]
+	public static class Pathfinding_AddDirtyNavGridCell_Patch {
+		internal static bool Prepare() => FastTrackOptions.Instance.CachePaths;
+
+		/// <summary>
+		/// Applied after AddDirtyNavGridCell runs.
+		/// </summary>
+		internal static void Postfix(int cell) {
+			Grid.CellToXY(cell, out int x, out int y);
+			PathCacher.InvalidateRegion(x, y, x, y);
 		}
 	}
 
@@ -307,6 +379,8 @@ namespace PeterHan.FastTrack.PathPatches {
 					reachables.Clear();
 					reachables.AddRange(nav.occupiedCells);
 					reachables.Sort();
+					// Pass along the abilities to avoid leaking them
+					result.abilitiesInstance = __instance.abilities;
 					// No changes
 					result.noLongerReachableCells.Clear();
 					result.newlyReachableCells.Clear();
@@ -399,12 +473,64 @@ namespace PeterHan.FastTrack.PathPatches {
 		internal static bool Prepare() => FastTrackOptions.Instance.CachePaths;
 
 		/// <summary>
+		/// Begins a path grid update.
+		/// </summary>
+		/// <param name="grid">The path grid to update.</param>
+		/// <param name="new_serial_no">The serial number used for new cells.</param>
+		/// <param name="root_cell">The originating cell.</param>
+		/// <param name="found_cells_list">The list where reachable cells will be placed.</param>
+		private static void BeginUpdate(PathGrid grid, ushort new_serial_no, int root_cell,
+				List<int> found_cells_list) {
+			if (found_cells_list == null)
+				found_cells_list = TemporaryPathList.Allocate();
+			grid.BeginUpdate(new_serial_no, root_cell, found_cells_list);
+		}
+
+		/// <summary>
 		/// Ends a path grid update and marks it as valid.
 		/// </summary>
 		/// <param name="grid">The path grid to update.</param>
 		private static void EndUpdate(PathGrid grid) {
+			int minX = int.MaxValue, maxX = -1, minY = int.MaxValue, maxY = -1;
+			// Compute actual bounds of reachable area; for critters and other bounded
+			// navigators, the offset/size could be used instead, but this might work better
+			// (at a small computation cost, since they cannot have that many cells and are
+			// updated relatively infrequently usually on background threads) in practice on
+			// common builds like pez dispensers and shine bug reactors
+			var cells = grid.freshlyOccupiedCells;
+			if (cells != null) {
+				int n = cells.Count;
+				for (int i = 0; i < n; i++) {
+					int cell = cells[i];
+					Grid.CellToXY(cell, out int x, out int y);
+					// This also makes huge differences in hit rates on Spaced Out worlds
+					// with heavy digging operations, as it will exclude all grids on other
+					// planets that are not being dug as often
+					if (x > maxX)
+						maxX = x;
+					if (x < minX)
+						minX = x;
+					if (y > maxY)
+						maxY = y;
+					if (y < minY)
+						minY = y;
+				}
+				if (n == 0) {
+					// Indicate no valid cells
+					minX = -1;
+					minY = -1;
+				}
+			} else if (grid.applyOffset)
+				// Backup with the bounds
+				lock (grid.Cells) {
+					minX = grid.rootX;
+					minY = grid.rootY;
+					maxX = minX + grid.widthInCells;
+					maxY = minY + grid.heightInCells;
+				}
+			TemporaryPathList.TryRecycle(cells);
 			grid.freshlyOccupiedCells = null;
-			PathCacher.SetValid(grid, true);
+			PathCacher.SetValid(grid, minX, minY, maxX, maxY);
 		}
 
 		/// <summary>
@@ -412,47 +538,44 @@ namespace PeterHan.FastTrack.PathPatches {
 		/// </summary>
 		internal static TranspiledMethod Transpiler(TranspiledMethod instructions,
 				ILGenerator generator) {
-			var target = typeof(PathGrid).GetMethodSafe(nameof(PathGrid.EndUpdate), false);
-			var replacement = typeof(PathProber_RunAsync_Patch).GetMethodSafe(nameof(
+			var targetEnd = typeof(PathGrid).GetMethodSafe(nameof(PathGrid.EndUpdate), false);
+			var replacementEnd = typeof(PathProber_RunAsync_Patch).GetMethodSafe(nameof(
 				EndUpdate), true, typeof(PathGrid));
-			bool patched = false;
+			var targetStart = typeof(PathGrid).GetMethodSafe(nameof(PathGrid.BeginUpdate),
+				false, typeof(ushort), typeof(int), typeof(List<int>));
+			var replacementStart = typeof(PathProber_RunAsync_Patch).GetMethodSafe(nameof(
+				BeginUpdate), true, typeof(PathGrid), typeof(ushort), typeof(int),
+				typeof(List<int>));
+			int patched = 0;
 			foreach (var instr in instructions) {
-				if (target != null && replacement != null && instr.opcode == OpCodes.
-						Callvirt && instr.operand is MethodBase info && info == target) {
-					instr.opcode = OpCodes.Call;
-					instr.operand = replacement;
+				if (instr.opcode == OpCodes.Callvirt && instr.operand is MethodBase info) {
+					if (replacementStart != null && info == targetStart) {
+						instr.opcode = OpCodes.Call;
+						instr.operand = replacementStart;
 #if DEBUG
-					PUtil.LogDebug("Patched PathProber.Run [E]");
+						PUtil.LogDebug("Patched PathProber.Run [S]");
 #endif
-					patched = true;
+						patched |= 1;
+					} else if (replacementEnd != null && info == targetEnd) {
+						instr.opcode = OpCodes.Call;
+						instr.operand = replacementEnd;
+#if DEBUG
+						PUtil.LogDebug("Patched PathProber.Run [E]");
+#endif
+						patched |= 2;
+					}
 				}
 				yield return instr;
 			}
-			if (!patched)
-				PUtil.LogWarning("Unable to patch PathProber.Run [E]");
+			if (patched != 3)
+				PUtil.LogWarning("Unable to patch PathProber.Run");
 		}
 	}
 
 	/// <summary>
-	/// Applied to Navigator to remove the path grid from the cache when it is destroyed.
-	/// </summary>
-	[HarmonyPatch(typeof(Navigator), nameof(Navigator.OnCleanUp))]
-	public static class Navigator_OnCleanUp_Patch {
-		internal static bool Prepare() => FastTrackOptions.Instance.CachePaths;
-
-		/// <summary>
-		/// Applied before OnCleanUp runs.
-		/// </summary>
-		internal static void Prefix(Navigator __instance) {
-			if (__instance != null)
-				PathCacher.Cleanup(__instance.PathGrid);
-		}
-	}
-
-	/// <summary>
-	/// Applied to SuitMarker to clear all Duplicant path caches if an important flag changes.
-	/// Fixes a base game bug where turning checkpoints on or off (or toggling vacancy) does
-	/// not invalidate current paths.
+	/// Applied to SuitMarker to clear matching Duplicant path caches if an important flag
+	/// changes. Fixes a base game bug where turning checkpoints on or off (or toggling
+	/// vacancy) does not invalidate current paths.
 	/// </summary>
 	[HarmonyPatch(typeof(SuitMarker), nameof(SuitMarker.UpdateGridFlag))]
 	public static class SuitMarker_UpdateGridFlag_Patch {
@@ -465,8 +588,51 @@ namespace PeterHan.FastTrack.PathPatches {
 				Grid.SuitMarker.Flags flag) {
 			if (((__instance.gridFlags & flag) == 0) == state && flag != Grid.SuitMarker.Flags.
 					Rotated && FastTrackMod.GameRunning)
-				// Just to be safe
-				PathCacher.InvalidateAllDuplicants();
+				// Less nuclear than killing all caches
+				Pathfinding.Instance?.AddDirtyNavGridCell(__instance.cell);
 		}
+	}
+
+	/// <summary>
+	/// Stores temporary path lists (extends List for trivial checking to see if it needs to
+	/// be returned) for otherwise-NULL queries.
+	/// </summary>
+	internal sealed class TemporaryPathList : List<int> {
+		/// <summary>
+		/// Limit allocations by reusing old lists.
+		/// </summary>
+		private static readonly ConcurrentQueue<TemporaryPathList> POOL =
+			new ConcurrentQueue<TemporaryPathList>();
+
+		/// <summary>
+		/// Clears out any extra entries that were not returned.
+		/// </summary>
+		internal static void Cleanup() {
+			POOL.Clear();
+		}
+
+		/// <summary>
+		/// Obtains a fresh path list. This method is thread safe.
+		/// </summary>
+		/// <returns>A temporary list for use in path caching.</returns>
+		internal static TemporaryPathList Allocate() {
+			if (!POOL.TryDequeue(out var result))
+				result = new TemporaryPathList();
+			return result;
+		}
+
+		/// <summary>
+		/// Tries to recycle the list, but only does so if it was taken from this class. This
+		/// method is thread safe.
+		/// </summary>
+		/// <param name="list">The list to recycle.</param>
+		internal static void TryRecycle(List<int> list) {
+			if (list is TemporaryPathList tpl) {
+				tpl.Clear();
+				POOL.Enqueue(tpl);
+			}
+		}
+
+		public TemporaryPathList() : base(64) { }
 	}
 }

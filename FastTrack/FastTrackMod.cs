@@ -23,7 +23,6 @@ using PeterHan.PLib.Core;
 using PeterHan.PLib.Database;
 using PeterHan.PLib.Options;
 using PeterHan.PLib.PatchManager;
-using System;
 using System.Collections.Generic;
 
 namespace PeterHan.FastTrack {
@@ -142,8 +141,11 @@ namespace PeterHan.FastTrack {
 			ConduitPatches.ConduitFlowVisualizerPatches.Cleanup();
 			if (options.FastReachability)
 				GamePatches.FastCellChangeMonitor.FastInstance?.Disarm();
-			if (options.CachePaths)
+			if (options.CachePaths) {
 				PathPatches.PathCacher.Cleanup();
+				PathPatches.NavGridGraphUpdater.DestroyInstance();
+				PathPatches.TemporaryPathList.Cleanup();
+			}
 			if (options.ReduceTileUpdates)
 				VisualPatches.PropertyTextureUpdater.DestroyInstance();
 			if (options.ConduitOpts)
@@ -241,8 +243,10 @@ namespace PeterHan.FastTrack {
 				UIPatches.SelectedRecipeQueuePatches.Init();
 			if (options.AsyncPathProbe)
 				PathPatches.PathProbeJobManager.CreateInstance();
-			if (options.CachePaths)
+			if (options.CachePaths) {
 				PathPatches.PathCacher.Init();
+				PathPatches.NavGridGraphUpdater.CreateInstance();
+			}
 			if (options.FastReachability)
 				SensorPatches.FastGroupProber.Init();
 			if (options.SideScreenOpts) {
