@@ -72,6 +72,8 @@ namespace PeterHan.FastTrack {
 			if (FastTrackOptions.Instance.ClusterMapReduce && DlcManager.
 					FeatureClusterSpaceEnabled())
 				UIPatches.ClusterMapScreenPatches.LoadSprites();
+			if (options.FlattenAverages)
+				CritterPatches.FertilizerMonitorPatches.Init();
 		}
 
 		/// <summary>
