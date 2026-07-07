@@ -24,7 +24,6 @@ using PeterHan.PLib.Database;
 using PeterHan.PLib.PatchManager;
 using PeterHan.PLib.UI;
 using System.Collections.Generic;
-using System.Reflection;
 using UnityEngine;
 
 namespace PeterHan.MoreAchievements {
@@ -307,7 +306,7 @@ namespace PeterHan.MoreAchievements {
 		}
 
 		/// <summary>
-		/// Applied to Health to properly track deaths due to scalding.
+		/// Applied to Health to properly track deaths due to scalding and frostbite.
 		/// </summary>
 		[HarmonyPatch(typeof(Health), nameof(Health.Incapacitate))]
 		public static class Health_Incapacitate_Patch {
@@ -315,8 +314,10 @@ namespace PeterHan.MoreAchievements {
 			/// Applied after Incapacitate runs.
 			/// </summary>
 			internal static void Postfix(Health __instance) {
+				var creatureStatus = Db.Get().CreatureStatusItems;
 				if (ScaldedTag != null && __instance.TryGetComponent(out KSelectable target) &&
-						target.HasStatusItem(Db.Get().CreatureStatusItems.Scalding) &&
+						(target.HasStatusItem(creatureStatus.Scalding) ||
+						target.HasStatusItem(creatureStatus.Scolding)) &&
 						__instance.TryGetComponent(out KPrefabID id))
 					id.AddTag(ScaldedTag, true);
 			}
@@ -340,15 +341,8 @@ namespace PeterHan.MoreAchievements {
 		/// <summary>
 		/// Applied to Health to remove scalding tags when a Duplicant recovers.
 		/// </summary>
-		[HarmonyPatch]
+		[HarmonyPatch(typeof(Health), "OnRecover")]
 		public static class Health_Recover_Patch {
-			// TODO Remove when versions prior to U55-658361 no longer need to be supported
-			internal static MethodBase TargetMethod() {
-				return typeof(Health).GetMethodSafe("OnRecover", false, PPatchTools.
-					AnyArguments) ?? typeof(Health).GetMethodSafe("Recover", false,
-					PPatchTools.AnyArguments);
-			}
-
 			/// <summary>
 			/// Applied after Recover runs.
 			/// </summary>
@@ -372,6 +366,60 @@ namespace PeterHan.MoreAchievements {
 				var id = __instance.GetComponent<KPrefabID>();
 				if (id != null && id.HasTag(ScaldedTag))
 					__result = Db.Get().Deaths.Overheating;
+			}
+		}
+
+		/// <summary>
+		/// Applied to NoFarmables to track the failing of Locavore more efficiently.
+		/// </summary>
+		[HarmonyPatch(typeof(Database.NoFarmables), nameof(Database.NoFarmables.Fail))]
+		public static class NoFarmables_Fail_Patch {
+			/// <summary>
+			/// Applied before Fail runs.
+			/// </summary>
+			[HarmonyPriority(Priority.LowerThanNormal)]
+			internal static bool Prefix(ref bool __result) {
+				var asc = AchievementStateComponent.Instance;
+				if (asc != null)
+					__result = asc.LocavoreFailed;
+				return asc == null;
+			}
+		}
+		
+		/// <summary>
+		/// Applied to NoFarmables to track the success of Locavore more efficiently.
+		/// </summary>
+		[HarmonyPatch(typeof(Database.NoFarmables), nameof(Database.NoFarmables.Success))]
+		public static class NoFarmables_Success_Patch {
+			/// <summary>
+			/// Applied before Success runs.
+			/// </summary>
+			[HarmonyPriority(Priority.LowerThanNormal)]
+			internal static bool Prefix(ref bool __result) {
+				var asc = AchievementStateComponent.Instance;
+				if (asc != null)
+					__result = !asc.LocavoreFailed;
+				return asc == null;
+			}
+		}
+
+		/// <summary>
+		/// Applied to ReceptacleMonitor to more efficiently track the Locavore (and related)
+		/// achievements.
+		/// </summary>
+		[HarmonyPatch(typeof(ReceptacleMonitor), nameof(ReceptacleMonitor.SetReceptacle))]
+		public static class ReceptacleMonitor_SetReceptacle_Patch {
+			/// <summary>
+			/// Applied after SetReceptacle runs.
+			/// </summary>
+			internal static void Postfix(ReceptacleMonitor __instance, PlantablePlot plot) {
+				var asc = AchievementStateComponent.Instance;
+				if (plot != null && asc != null && __instance.TryGetComponent(
+						out Crop crop)) {
+					string cropId = crop.cropId;
+					if (asc.IsFoodCrop(cropId)) 
+						asc.FailLocavore();
+				}
 			}
 		}
 

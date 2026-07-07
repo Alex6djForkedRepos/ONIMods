@@ -339,7 +339,8 @@ namespace PeterHan.FastTrack {
 		/// </summary>
 		[HarmonyPriority(Priority.Low)]
 		internal static bool Prefix(Workable __instance) {
-			if (__instance.TryGetComponent(out KSelectable selectable)) {
+			// Somehow this can still be called from event triggers on disposed workables
+			if (__instance != null && __instance.TryGetComponent(out KSelectable selectable)) {
 				var working = __instance.workingStatusItem;
 				ref var statusHandle = ref __instance.workStatusItemHandle;
 				selectable.RemoveStatusItem(statusHandle);

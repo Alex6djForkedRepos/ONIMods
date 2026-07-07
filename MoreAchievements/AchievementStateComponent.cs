@@ -21,7 +21,6 @@ using PeterHan.MoreAchievements.Criteria;
 using PeterHan.PLib.Core;
 using System;
 using System.Collections.Generic;
-using PeterHan.PLib.Detours;
 using UnityEngine;
 
 namespace PeterHan.MoreAchievements {
@@ -30,11 +29,6 @@ namespace PeterHan.MoreAchievements {
 	/// </summary>
 	[SerializationConfig(MemberSerialization.OptIn)]
 	public sealed class AchievementStateComponent : KMonoBehaviour, ISim1000ms {
-		// TODO Remove when versions prior to U55-658361 no longer need to be supported
-		private static readonly IDetouredField<ClusterManager, IList<WorldContainer>>
-			WHOLE_NEW_WORLDS = PDetours.DetourField<ClusterManager, IList<WorldContainer>>(
-				nameof(ClusterManager.WorldContainers));
-
 		/// <summary>
 		/// Retrieves the singleton instance of this component, which is created when a game
 		/// is loaded or started.
@@ -126,6 +120,11 @@ namespace PeterHan.MoreAchievements {
 			}
 		}
 
+		/// <summary>
+		/// The list of prefab IDs that are considered foods or primary food ingredients.
+		/// </summary>
+		private readonly ISet<string> foods;
+
 		#region BuildNBuildings
 		/// <summary>
 		/// The number of buildings built.
@@ -170,6 +169,14 @@ namespace PeterHan.MoreAchievements {
 		/// </summary>
 		[Serialize]
 		internal int LastDeath;
+		#endregion
+
+		#region NoFarmables
+		/// <summary>
+		/// Set to true if a food plant is planted.
+		/// </summary>
+		[Serialize]
+		internal bool LocavoreFailed;
 		#endregion
 
 		#region ReachXAllAttributes
@@ -231,6 +238,55 @@ namespace PeterHan.MoreAchievements {
 			BestVarietyValue = 0.0f;
 			MaxKelvinSeen = 0.0f;
 			PlanetsRequired = int.MaxValue;
+			foods = new HashSet<string>();
+		}
+
+		/// <summary>
+		/// Counts the number of artifacts that have been obtained.
+		/// </summary>
+		private void CountArtifacts() {
+			int have = 0, n;
+			// Count artifacts discovered
+			foreach (var pair in ArtifactConfig.artifactItems) {
+				var artifacts = pair.Value;
+				n = artifacts.Count;
+				for (int i = 0; i < n; i++)
+					if (DiscoveredResources.Instance.IsDiscovered(Assets.GetPrefab(
+							artifacts[i]).PrefabID()))
+						have++;
+			}
+			ArtifactsObtained = have;
+		}
+
+		/// <summary>
+		/// Marks the Locavore achievement as failed.
+		/// </summary>
+		internal void FailLocavore() {
+			LocavoreFailed = true;
+		}
+
+		/// <summary>
+		/// Finds the best candidate for the Jack of All Trades achievement.
+		/// </summary>
+		private void FindJester() {
+			var dupes = Components.LiveMinionIdentities.Items;
+			int n = dupes.Count, va = VarietyAttributes.Length;
+			for (int i = 0; i < n; i++) {
+				var duplicant = dupes[i];
+				if (duplicant != null) {
+					float minValue = float.MaxValue;
+					// Find the worst attribute on this Duplicant for JoaT
+					for (int j = 0; j < va; j++) {
+						float attrValue = VarietyAttributes[j].Lookup(duplicant)?.
+							GetTotalValue() ?? 0.0f;
+						if (attrValue < minValue)
+							minValue = attrValue;
+					}
+					// If this Duplicant is better than previous jester, update it
+					if (minValue >= BestVarietyValue)
+						BestVarietyValue = minValue;
+				}
+			}
 		}
 
 		/// <summary>
@@ -271,6 +327,19 @@ namespace PeterHan.MoreAchievements {
 		}
 
 		/// <summary>
+		/// Checks to see if the item is a food item, or is a primary ingredient in a food
+		/// recipe.
+		/// </summary>
+		/// <param name="cropId">The crop ID to check.</param>
+		/// <returns>true if it is a food crop, or false otherwise.</returns>
+		internal bool IsFoodCrop(string cropId) {
+			bool food = !string.IsNullOrEmpty(cropId);
+			if (food)
+				food = foods.Contains(cropId);
+			return food;
+		}
+
+		/// <summary>
 		/// Called when a building is completed.
 		/// </summary>
 		private void OnBuildingCompleted(object _) {
@@ -304,12 +373,9 @@ namespace PeterHan.MoreAchievements {
 			if (BuildingsBuilt == 0)
 				// Not yet initialized, fill with number of completed buildings
 				BuildingsBuilt = Components.BuildingCompletes.Count;
-			if (PlanetsVisited == null)
-				PlanetsVisited = new HashSet<int>();
-			if (TriggerEvents == null)
-				TriggerEvents = new Dictionary<string, bool>(64);
-			if (BestAttributeValue == null)
-				BestAttributeValue = new Dictionary<string, float>(64);
+			PlanetsVisited ??= new HashSet<int>();
+			TriggerEvents ??= new Dictionary<string, bool>(64);
+			BestAttributeValue ??= new Dictionary<string, float>(64);
 			if (LastDeath <= 0)
 				InitGrimReaper();
 			var dbAttr = Db.Get().Attributes;
@@ -341,49 +407,98 @@ namespace PeterHan.MoreAchievements {
 				inst.Subscribe((int)GameHashes.NewBuilding, OnBuildingCompleted);
 				inst.Subscribe(DigNTiles.DigComplete, OnDigCompleted);
 			}
+			ScanLocavore();
+		}
+
+		/// <summary>
+		/// Scans the map for invalid candidates for Locavore. Only runs once when the map is
+		/// loaded.
+		/// </summary>
+		private void ScanLocavore() {
+			var edibleList = EdiblesManager.GetAllLoadedFoodTypes();
+			var rawEdibles = new HashSet<string>();
+			// Go through recipes, Food Supply Tooltips style
+			foods.Clear();
+			foreach (var food in edibleList)
+				rawEdibles.Add(food.Id);
+			foods.UnionWith(rawEdibles);
+			foreach (var recipe in RecipeManager.Get().recipes) {
+				var ingred = recipe.Ingredients;
+				if (ingred.Count == 1 && rawEdibles.Contains(recipe.Result.Name))
+					foods.Add(ingred[0].tag.Name);
+			}
+			foreach (var recipe in ComplexRecipeManager.Get().recipes) {
+				var ingred = recipe.ingredients;
+				var results = recipe.results;
+				int n = results.Length;
+				for (int i = 0; i < n; i++)
+					if (rawEdibles.Contains(results[i].material.Name)) {
+						// Avoid problematic recipes like the smoker requiring wood, which
+						// disallows all of the tree variants as "edibles"
+						if (ingred.Length == 1)
+							foods.Add(ingred[0].material.Name);
+						break;
+					}
+			}
+#if DEBUG
+			PUtil.LogDebug("Detected foods: " + foods.Join(", "));
+#endif
+			rawEdibles.Clear();
+			var plots = Components.PlantablePlots;
+			foreach (var world in plots.GetWorldsIds()) {
+				// This skips planets with no plots
+				var inWorld = plots.GetItems(world);
+				int n = inWorld.Count;
+				for (int i = 0; i < n; i++) {
+					var plant = inWorld[i].Occupant;
+					if (plant != null && plant.TryGetComponent(out Crop crop) &&
+							IsFoodCrop(crop.cropId)) {
+						FailLocavore();
+						break;
+					}
+				}
+			}
 		}
 
 		public void Sim1000ms(float dt) {
-			int have = 0;
-			// Count artifacts discovered
-			foreach (var pair in ArtifactConfig.artifactItems)
-				foreach (string artName in pair.Value)
-					if (DiscoveredResources.Instance.IsDiscovered(Assets.GetPrefab(artName).
-							PrefabID()))
-						have++;
-			ArtifactsObtained = have;
-			foreach (var duplicant in Components.LiveMinionIdentities.Items)
-				if (duplicant != null) {
-					float minValue = float.MaxValue;
-					// Find the worst attribute on this Duplicant for JoaT
-					foreach (var attribute in VarietyAttributes) {
-						float attrValue = attribute.Lookup(duplicant)?.GetTotalValue() ?? 0.0f;
-						if (attrValue < minValue)
-							minValue = attrValue;
-					}
-					// If this Duplicant is better than previous jester, update it
-					if (minValue >= BestVarietyValue)
-						BestVarietyValue = minValue;
+			CountArtifacts();
+			FindJester();
+			UpdateAttributes();
+			// Mark visited worlds for DLC
+			if (DlcManager.IsExpansion1Active()) {
+				var wc = ClusterManager.Instance.WorldContainers;
+				int n = wc.Count;
+				for (int i = 0; i < n; i++) {
+					var world = wc[i];
+					if (world.IsDupeVisited)
+						PlanetsVisited.Add(world.id);
 				}
+			}
+		}
+
+		/// <summary>
+		/// Updates the best Duplicant in each attribute.
+		/// </summary>
+		private void UpdateAttributes() {
+			var dupes = Components.LiveMinionIdentities.Items;
 			// For each value requested, update the value if needed
 			var keys = ListPool<string, AchievementStateComponent>.Allocate();
 			keys.Clear();
 			keys.AddRange(BestAttributeValue.Keys);
-			foreach (var attribute in keys) {
+			int n = keys.Count, nd = dupes.Count;
+			for (int i = 0; i < n; i++) {
 				// Check each duplicant for the best value
 				float best = 0.0f;
+				var attribute = keys[i];
 				var attr = Db.Get().Attributes.Get(attribute);
-				foreach (var duplicant in Components.LiveMinionIdentities.Items)
+				for (int j = 0; j < nd; j++) {
+					var duplicant = dupes[j];
 					if (duplicant != null)
 						best = Math.Max(best, attr.Lookup(duplicant).GetTotalValue());
+				}
 				BestAttributeValue[attribute] = best;
 			}
 			keys.Recycle();
-			// Mark visited worlds for DLC
-			if (DlcManager.IsExpansion1Active())
-				foreach (var world in WHOLE_NEW_WORLDS.Get(ClusterManager.Instance))
-					if (world.IsDupeVisited)
-						PlanetsVisited.Add(world.id);
 		}
 	}
 }
