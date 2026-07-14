@@ -13,8 +13,8 @@ msgstr ""
 "Plural-Forms: nplurals=1; plural=0;\n"
 "Language: zh_CN\n"
 
-#. PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.FILTEREDGASPUMP.DESC
-msgctxt "PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.FILTEREDGASPUMP.DESC"
+#. PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.PETERHAN_FILTEREDGASPUMP.DESC
+msgctxt "PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.PETERHAN_FILTEREDGASPUMP.DESC"
 msgid ""
 "Rumors hold that hidden behind the parts from discarded Carbon Skimmers used "
 "in this pump is a demon with a pair of chopsticks, picking gas molecules "
@@ -23,8 +23,8 @@ msgstr ""
 "有传言说，在这个泵中使用的废弃除碳器的零件背后，隐藏着一个拿着筷子的恶魔，永"
 "远在从空气中挑选气体分子。"
 
-#. PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.FILTEREDGASPUMP.EFFECT
-msgctxt "PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.FILTEREDGASPUMP.EFFECT"
+#. PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.PETERHAN_FILTEREDGASPUMP.EFFECT
+msgctxt "PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.PETERHAN_FILTEREDGASPUMP.EFFECT"
 msgid ""
 "Draws in only the specified <link=\"ELEMENTSGAS\">Gas</link> and runs it "
 "through <link=\"GASPIPING\">Pipes</link>.\n"
@@ -36,13 +36,13 @@ msgstr ""
 "\n"
 "必须浸没在<link=\"ELEMENTSGAS\">气体</link>中。"
 
-#. PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.FILTEREDGASPUMP.NAME
-msgctxt "PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.FILTEREDGASPUMP.NAME"
+#. PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.PETERHAN_FILTEREDGASPUMP.NAME
+msgctxt "PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.PETERHAN_FILTEREDGASPUMP.NAME"
 msgid "<link=\"FILTEREDGASPUMP\">Filtered Gas Pump</link>"
 msgstr "<link=\"FILTEREDGASPUMP\">过滤式气泵</link>"
 
-#. PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.FILTEREDLIQUIDPUMP.DESC
-msgctxt "PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.FILTEREDLIQUIDPUMP.DESC"
+#. PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.PETERHAN_FILTEREDLIQUIDPUMP.DESC
+msgctxt "PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.PETERHAN_FILTEREDLIQUIDPUMP.DESC"
 msgid ""
 "Scarred by nightmares of mixed liquid pools, an obsessive colony AI "
 "commissioned this pump with an attached Element Sensor in an attempt to "
@@ -51,8 +51,8 @@ msgstr ""
 "由于被混合液体池的噩梦吓到了，一个痴迷的殖民地AI委托制作了这个带有元素传感器"
 "的泵，试图永远清除这种异端。"
 
-#. PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.FILTEREDLIQUIDPUMP.EFFECT
-msgctxt "PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.FILTEREDLIQUIDPUMP.EFFECT"
+#. PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.PETERHAN_FILTEREDLIQUIDPUMP.EFFECT
+msgctxt "PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.PETERHAN_FILTEREDLIQUIDPUMP.EFFECT"
 msgid ""
 "Draws in only the specified <link=\"ELEMENTSLIQUID\">Liquid</link> and runs "
 "it through <link=\"LIQUIDPIPING\">Pipes</link>.\n"
@@ -64,8 +64,8 @@ msgstr ""
 "\n"
 "必须浸没在<link=\"ELEMENTSLIQUID\">液体</link>中。"
 
-#. PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.FILTEREDLIQUIDPUMP.NAME
-msgctxt "PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.FILTEREDLIQUIDPUMP.NAME"
+#. PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.PETERHAN_FILTEREDLIQUIDPUMP.NAME
+msgctxt "PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.PETERHAN_FILTEREDLIQUIDPUMP.NAME"
 msgid "<link=\"FILTEREDLIQUIDPUMP\">Filtered Liquid Pump</link>"
 msgstr "<link=\"FILTEREDLIQUIDPUMP\">过滤式液泵</link>"
 

@@ -38,6 +38,8 @@ namespace PeterHan.SmartPumps {
 			var bm = new PBuildingManager();
 			bm.Register(FilteredGasPumpConfig.CreateBuilding());
 			bm.Register(FilteredLiquidPumpConfig.CreateBuilding());
+			bm.Register(LegacyFilteredGasPumpConfig.CreateBuilding());
+			bm.Register(LegacyFilteredLiquidPumpConfig.CreateBuilding());
 			bm.Register(VacuumPumpConfig.CreateBuilding());
 			new PPatchManager(harmony).RegisterPatchClass(typeof(FilteredPump));
 			new PVersionCheck().Register(this, new SteamVersionChecker());
@@ -58,9 +60,16 @@ namespace PeterHan.SmartPumps {
 				if (target.GetComponent<Filterable>() != null && __instance.isLogicFilter &&
 						prefabID != null) {
 					// Some targets do not have an ID?
-					var id = prefabID.PrefabTag;
-					if (id == FilteredGasPumpConfig.ID || id == FilteredLiquidPumpConfig.ID)
+					switch (prefabID.PrefabTag.Name) {
+					case FilteredGasPumpConfig.ID:
+					case FilteredLiquidPumpConfig.ID:
+					case LegacyFilteredGasPumpConfig.ID:
+					case LegacyFilteredLiquidPumpConfig.ID:
 						__result = true;
+						break;
+					default:
+						break;
+					}
 				}
 			}
 		}

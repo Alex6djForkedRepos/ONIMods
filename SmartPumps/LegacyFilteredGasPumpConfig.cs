@@ -23,25 +23,50 @@ using UnityEngine;
 namespace PeterHan.SmartPumps {
 	/// <summary>
 	/// A gas pump which only pulls a specified gas if seen.
+	/// 
+	/// This is a deprecated version to allow save compatibility with existing pre-Gasket pumps.
 	/// </summary>
-	public sealed class FilteredGasPumpConfig : IBuildingConfig {
+	public sealed class LegacyFilteredGasPumpConfig : IBuildingConfig {
+		/// <summary>
+		/// Shared configuration between the legacy and new filtered gas pumps.
+		/// </summary>
+		/// <param name="go">The object to configure.</param>
+		internal static void ConfigureGasPump(GameObject go) {
+			go.AddOrGet<LogicOperationalController>();
+			go.AddOrGet<LoopingSounds>();
+			var filterable = go.AddOrGet<Filterable>();
+			filterable.filterElementState = Filterable.ElementState.Gas;
+			go.AddOrGet<Storage>().capacityKg = 1f;
+			var elementConsumer = go.AddOrGet<ElementConsumer>();
+			elementConsumer.configuration = ElementConsumer.Configuration.Element;
+			elementConsumer.elementToConsume = SimHashes.Vacuum;
+			elementConsumer.consumptionRate = Mathf.Max(0.0f, Mathf.Min(1.0f,
+				SmartPumpsOptions.Instance.RateLargeGasPump));
+			elementConsumer.storeOnConsume = true;
+			elementConsumer.showInStatusPanel = false;
+			elementConsumer.consumptionRadius = 2;
+			elementConsumer.EnableConsumption(false);
+			go.AddOrGetDef<OperationalController.Def>();
+			go.AddOrGet<FilteredPump>();
+			go.AddOrGet<KPrefabID>().AddTag(GameTags.OverlayBehindConduits, false);
+		}
+
 		/// <summary>
 		/// The completed building template.
 		/// </summary>
-		internal static PBuilding GasPumpFiltered;
+		internal static PBuilding LegacyGasPumpFiltered;
 
 		/// <summary>
 		/// The building ID.
 		/// </summary>
-		internal const string ID = "PeterHan_FilteredGasPump";
+		internal const string ID = "FilteredGasPump";
 
 		/// <summary>
 		/// Registers this building.
 		/// </summary>
 		internal static PBuilding CreateBuilding() {
-			// Initialize it here to allow localization to change the strings
-			return GasPumpFiltered = new PBuilding(ID, SmartPumpsStrings.BUILDINGS.PREFABS.
-					PETERHAN_FILTEREDGASPUMP.NAME) {
+			return LegacyGasPumpFiltered = new PBuilding(ID, SmartPumpsStrings.BUILDINGS.PREFABS.
+					FILTEREDGASPUMP.NAME) {
 				AddAfter = "GasMiniPump",
 				Animation = "pumpGasFiltered_kanim",
 				Category = "HVAC",
@@ -51,7 +76,7 @@ namespace PeterHan.SmartPumps {
 				EffectText = null,
 				Entombs = true,
 				Floods = true,
-				HeatGeneration = 0.25f,
+				HeatGeneration = 2.0f,
 				Height = 2,
 				HP = 30,
 				LogicIO = {
@@ -59,7 +84,7 @@ namespace PeterHan.SmartPumps {
 				},
 				Ingredients = {
 					new BuildIngredient(TUNING.MATERIALS.REFINED_METAL, tier: 1),
-					new BuildIngredient(TUNING.MATERIALS.GASKET, 1.0f)
+					new BuildIngredient(TUNING.MATERIALS.PLASTIC, tier: 0)
 				},
 				OutputConduits = {
 					new ConduitConnection(ConduitType.Gas, new CellOffset(1, 1))
@@ -77,29 +102,31 @@ namespace PeterHan.SmartPumps {
 
 		public override void ConfigureBuildingTemplate(GameObject go, Tag prefab_tag) {
 			base.ConfigureBuildingTemplate(go, prefab_tag);
-			GasPumpFiltered?.ConfigureBuildingTemplate(go);
+			LegacyGasPumpFiltered?.ConfigureBuildingTemplate(go);
 		}
 
 		public override BuildingDef CreateBuildingDef() {
-			PGameUtils.CopySoundsToAnim(GasPumpFiltered.Animation, "pumpgas_kanim");
+			PGameUtils.CopySoundsToAnim(LegacyGasPumpFiltered.Animation, "pumpgas_kanim");
 			GeneratedBuildings.RegisterWithOverlay(OverlayScreen.GasVentIDs, ID);
 			// Added before the others, because it was registered first
 			LocString.CreateLocStringKeys(typeof(SmartPumpsStrings.BUILDINGS));
-			return GasPumpFiltered?.CreateDef();
+			var def = LegacyGasPumpFiltered?.CreateDef();
+			def.Deprecated = true;
+			return def;
 		}
 
 		public override void DoPostConfigureUnderConstruction(GameObject go) {
-			GasPumpFiltered?.CreateLogicPorts(go);
+			LegacyGasPumpFiltered?.CreateLogicPorts(go);
 		}
 
 		public override void DoPostConfigurePreview(BuildingDef def, GameObject go) {
-			GasPumpFiltered?.CreateLogicPorts(go);
+			LegacyGasPumpFiltered?.CreateLogicPorts(go);
 		}
 
 		public override void DoPostConfigureComplete(GameObject go) {
-			GasPumpFiltered?.DoPostConfigureComplete(go);
-			GasPumpFiltered?.CreateLogicPorts(go);
-			LegacyFilteredGasPumpConfig.ConfigureGasPump(go);
+			LegacyGasPumpFiltered?.DoPostConfigureComplete(go);
+			LegacyGasPumpFiltered?.CreateLogicPorts(go);
+			ConfigureGasPump(go);
 		}
 	}
 }

@@ -16,12 +16,13 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-using System;
-using System.Runtime.CompilerServices;
 using HarmonyLib;
 using Klei;
 using Klei.AI;
 using PeterHan.PLib.Core;
+using ProcGenGame;
+using System;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 
 namespace PeterHan.FastTrack.GamePatches {
@@ -279,7 +280,8 @@ namespace PeterHan.FastTrack.GamePatches {
 		/// <summary>
 		/// Applied after RenderToMap runs.
 		/// </summary>
-		private static void RenderToMap_Postfix(ref Sim.DiseaseCell[] dcs) {
+		private static void RenderToMap_Postfix(ref WorldgenSimData simData) {
+			var dcs = simData.diseaseCells;
 			int n = dcs.Length;
 			byte idx = SimUtil.DiseaseInfo.Invalid.idx;
 			for (int i = 0; i < n; i++) {

@@ -24,6 +24,30 @@ namespace PeterHan.SmartPumps {
 		public static class BUILDINGS {
 			public static class PREFABS {
 				public static class FILTEREDGASPUMP {
+					public static LocString NAME = STRINGS.UI.FormatAsLink("Filtered Gas Pump", LegacyFilteredGasPumpConfig.ID);
+					public static LocString DESC = "Deprecated building. Will still function, but replace with the current version when possible.";
+					public static LocString EFFECT = string.Concat("Draws in only the specified ",
+						STRINGS.UI.FormatAsLink("Gas", "ELEMENTS_GAS"),
+						" and runs it through ",
+						STRINGS.UI.FormatAsLink("Pipes", "GASPIPING"),
+						".\n\nMust be immersed in ",
+						STRINGS.UI.FormatAsLink("Gas", "ELEMENTS_GAS"),
+						".");
+				}
+
+				public static class FILTEREDLIQUIDPUMP {
+					public static LocString NAME = STRINGS.UI.FormatAsLink("Filtered Liquid Pump", LegacyFilteredLiquidPumpConfig.ID);
+					public static LocString DESC = "Deprecated building. Will still function, but replace with the current version when possible.";
+					public static LocString EFFECT = string.Concat("Draws in only the specified ",
+						STRINGS.UI.FormatAsLink("Liquid", "ELEMENTS_LIQUID"),
+						" and runs it through ",
+						STRINGS.UI.FormatAsLink("Pipes", "LIQUIDPIPING"),
+						".\n\nMust be submerged in ",
+						STRINGS.UI.FormatAsLink("Liquid", "ELEMENTS_LIQUID"),
+						".");
+				}
+
+				public static class PETERHAN_FILTEREDGASPUMP {
 					public static LocString NAME = STRINGS.UI.FormatAsLink("Filtered Gas Pump", FilteredGasPumpConfig.ID);
 					public static LocString DESC = "Rumors hold that hidden behind the parts from discarded Carbon Skimmers used in this pump is a demon with a pair of chopsticks, picking gas molecules from the air forever and ever.";
 					public static LocString EFFECT = string.Concat("Draws in only the specified ",
@@ -35,7 +59,7 @@ namespace PeterHan.SmartPumps {
 						".");
 				}
 
-				public static class FILTEREDLIQUIDPUMP {
+				public static class PETERHAN_FILTEREDLIQUIDPUMP {
 					public static LocString NAME = STRINGS.UI.FormatAsLink("Filtered Liquid Pump", FilteredLiquidPumpConfig.ID);
 					public static LocString DESC = "Scarred by nightmares of mixed liquid pools, an obsessive colony AI commissioned this pump with an attached Element Sensor in an attempt to purge this heresy forever.";
 					public static LocString EFFECT = string.Concat("Draws in only the specified ",

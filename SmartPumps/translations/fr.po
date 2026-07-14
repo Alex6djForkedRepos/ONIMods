@@ -12,9 +12,9 @@ msgstr ""
 "Application: Oxygen Not IncludedPOT Version: 2.0\n"
 "X-Generator: Poedit 3.4.1\n"
 
-#. PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.FILTEREDGASPUMP.DESC
+#. PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.PETERHAN_FILTEREDGASPUMP.DESC
 msgctxt ""
-"PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.FILTEREDGASPUMP.DESC"
+"PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.PETERHAN_FILTEREDGASPUMP.DESC"
 msgid ""
 "Rumors hold that hidden behind the parts from discarded Carbon Skimmers used "
 "in this pump is a demon with a pair of chopsticks, picking gas molecules "
@@ -24,9 +24,9 @@ msgstr ""
 "rebut utilisés dans cette pompe se cache un démon muni d'une paire de "
 "baguettes, qui prélève des molécules de gaz dans l'air pour l'éternité."
 
-#. PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.FILTEREDGASPUMP.EFFECT
+#. PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.PETERHAN_FILTEREDGASPUMP.EFFECT
 msgctxt ""
-"PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.FILTEREDGASPUMP."
+"PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.PETERHAN_FILTEREDGASPUMP."
 "EFFECT"
 msgid ""
 "Draws in only the specified <link=\"ELEMENTSGAS\">Gas</link> and runs it "
@@ -39,15 +39,15 @@ msgstr ""
 "\n"
 "Doit être immergé dans le <link=\"ELEMENTSGAS\">Gaz</link>."
 
-#. PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.FILTEREDGASPUMP.NAME
+#. PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.PETERHAN_FILTEREDGASPUMP.NAME
 msgctxt ""
-"PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.FILTEREDGASPUMP.NAME"
+"PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.PETERHAN_FILTEREDGASPUMP.NAME"
 msgid "<link=\"FILTEREDGASPUMP\">Filtered Gas Pump</link>"
 msgstr "<link=\"FILTEREDGASPUMP\">Pompe à gaz filtrée</link>"
 
-#. PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.FILTEREDLIQUIDPUMP.DESC
+#. PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.PETERHAN_FILTEREDLIQUIDPUMP.DESC
 msgctxt ""
-"PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.FILTEREDLIQUIDPUMP."
+"PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.PETERHAN_FILTEREDLIQUIDPUMP."
 "DESC"
 msgid ""
 "Scarred by nightmares of mixed liquid pools, an obsessive colony AI "
@@ -58,9 +58,9 @@ msgstr ""
 "obsessionnelle de la colonie a commandé cette pompe avec un capteur "
 "d'éléments pour tenter de se débarrasser à jamais de cette hérésie."
 
-#. PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.FILTEREDLIQUIDPUMP.EFFECT
+#. PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.PETERHAN_FILTEREDLIQUIDPUMP.EFFECT
 msgctxt ""
-"PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.FILTEREDLIQUIDPUMP."
+"PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.PETERHAN_FILTEREDLIQUIDPUMP."
 "EFFECT"
 msgid ""
 "Draws in only the specified <link=\"ELEMENTSLIQUID\">Liquid</link> and runs "
@@ -73,9 +73,9 @@ msgstr ""
 "\n"
 "Doit être immergé dans <link=\"ELEMENTSLIQUID\">Liquide</link>."
 
-#. PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.FILTEREDLIQUIDPUMP.NAME
+#. PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.PETERHAN_FILTEREDLIQUIDPUMP.NAME
 msgctxt ""
-"PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.FILTEREDLIQUIDPUMP."
+"PeterHan.SmartPumps.SmartPumpsStrings.BUILDINGS.PREFABS.PETERHAN_FILTEREDLIQUIDPUMP."
 "NAME"
 msgid "<link=\"FILTEREDLIQUIDPUMP\">Filtered Liquid Pump</link>"
 msgstr "<link=\"FILTEREDLIQUIDPUMP\">Pompe à liquide filtré</link>"

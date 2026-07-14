@@ -59,7 +59,7 @@ namespace PeterHan.SmartPumps {
 					PBuilding.CompatLogicPort(LogicPortSpriteType.Input, new CellOffset(0, 1))
 				},
 				Ingredients = {
-					new BuildIngredient(TUNING.MATERIALS.PLASTIC, tier: 1),
+					new BuildIngredient(TUNING.MATERIALS.RUBBER_OR_PLASTIC, tier: 1),
 					new BuildIngredient(TUNING.MATERIALS.REFINED_METAL, tier: 0)
 				},
 				OutputConduits = {
