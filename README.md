@@ -25,6 +25,10 @@ Mods should remain in their own subfolder.
 
 **Do not use a Steam copy and a local copy of the same mod at the same time.** Disable the Steam version in the mods list before activating any local copies.
 
+# PLib Documentation
+
+PLib documentation is available in [PLib/README.md](https://github.com/peterhaneve/ONIMods/blob/main/PLib/README.md).
+
 # Mod List
 
 ## Minor Updates - No Mechanics Changes
