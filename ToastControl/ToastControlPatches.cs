@@ -74,13 +74,16 @@ namespace PeterHan.ToastControl {
 		/// Methods to patch for the long form of PopFXManager.SpawnFX.
 		/// </summary>
 		private static ICollection<string> TargetsLong => new List<string>() {
-			"ComplexFabricator:SpawnOrderProduct",
-			"CreatureCalorieMonitor+Stomach:Poop",
+			"BaseSquidConfig:InkAttack",
+			"ComplexFabricator:SpawnOrderProduct", // 3 hits
+			"CreatureCalorieMonitor+Stomach:PoopInStorage",
+			"Crop:SpawnAndGetSomeFruit",
 			"Deconstructable:SpawnPopFxs",
 			"Moppable:Sim1000ms",
+			"PlantFiberProducer:SpawnPlantFiber",
 			"SeedProducer:ProduceSeed",
 			"SolidConsumerMonitor+Instance:OnEatSolidComplete",
-			"Storage:DropSome",
+			"Storage:DropSome", // 3 hits
 			"Storage:Store",
 			"WorldDamage:OnDigComplete"
 		};
@@ -92,19 +95,25 @@ namespace PeterHan.ToastControl {
 			"BaseUtilityBuildTool:BuildPath", // 2 hits
 			"BuildTool:PostProcessBuild",
 			"CaptureTool:MarkForCapture",
+			"ClusterTelescope+ClusterTelescopeWorkable:OnWorkTick",
 			"CopyBuildingSettings:ApplyCopy",
 			"DebugHandler:SpawnMinion",
 			"DebugHandler:OnKeyDown",
 			"FlushToilet:AddDisseaseToWorker",
+			"GunkEmptier:AddDisseaseToWorker",
+			"GunkMonitor+Instance:ExpellGunk",
 			"Klei.AI.AttributeLevel:LevelUp",
 			"MaterialSelector:AutoSelectAvailableMaterial",
 			"MinionResume:OnSkillPointGained",
 			"MopTool:OnDragTool",
 			"SandboxSampleTool:OnLeftClickDown",
+			"SeekAndInstallBionicUpgradeChore:InstallUpgrade",
 			"SuperProductive+<>c:<InitializeStates>b__3_0",
+			"Telepad:SpawnExtraPowerBanks", // 2 hits
 			"Toilet:FlushMultiple",
 			"ToiletWorkableUse:OnCompleteWork",
-			"UtilityBuildTool:ApplyPathToConduitSystem"
+			"UtilityBuildTool:ApplyPathToConduitSystem",
+			"WearableAccessorizer:Update"
 		};
 
 		/// <summary>
@@ -112,9 +121,12 @@ namespace PeterHan.ToastControl {
 		/// </summary>
 		private static ICollection<string> TargetsShort => new List<string>() {
 			"BuildingHP:DoDamagePopFX",
+			"Carvable:ProducePickupable",
 			"Constructable:OnCompleteWork",
+			"Electrobank:EvaluateWaterDamage",
 			"ElementDropperMonitor+Instance:DropElement",
 			"ElementEmitter:ForceEmit",
+			"FartChore:DoFart",
 			"FleeStates+<>c:<InitializeStates>b__8_1",
 			"HarvestDesignatable:<OnRefreshUserMenu>b__36_0",
 			"HarvestDesignatable:<OnRefreshUserMenu>b__36_1",
@@ -122,6 +134,7 @@ namespace PeterHan.ToastControl {
 			"Klei.AI.SicknessInstance+StatesInstance:Infect",
 			"Klei.AI.SicknessInstance+StatesInstance:Cure",
 			"Klei.AI.SlimeSickness+SlimeLungComponent+StatesInstance:ProduceSlime",
+			"LoreBearer:OnClickRead",
 			"NuclearResearchCenterWorkable:OnWorkTick",
 			"PeeChore+States+<>c:<InitializeStates>b__2_6",
 			"ReorderableBuilding:ConvertModule",
@@ -130,7 +143,12 @@ namespace PeterHan.ToastControl {
 			"RotPile:ConvertToElement",
 			"Rottable+<>c:<InitializeStates>b__10_8",
 			"SandboxClearFloorTool:OnPaintCell",
-			"SetLocker:DropContents",
+			"SandboxStressTool:OnPaintCell", // 2 hits
+			"SetLocker:DropContents", // 2 hits
+			"SleepClinicPajamas+<>c:<CreateEquipmentDef>b__2_1",
+			"SlipperyMonitor+SlipReactable:ApplyStress",
+			"SlipperyMonitor+SlipReactable:InternalBegin",
+			"SolidConsumerMonitor+Instance:OnEatSolidComplete",
 			"VomitChore+States+<>c:<InitializeStates>b__7_4"
 		};
 

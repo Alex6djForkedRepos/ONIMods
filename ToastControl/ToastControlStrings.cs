@@ -49,7 +49,9 @@ namespace PeterHan.ToastControl {
 					public static LocString DISABLE_MOVING_TOOLTIP = "If selected, popup text will no longer move upwards after creation";
 
 					public static LocString BUILD_COMPLETE = "Construction completed";
+					public static LocString CLOTHING_CHANGE = "Clothing changed";
 					public static LocString CRITTER_DROPS = "Critter drops";
+					public static LocString CROP_HARVESTED = "Crop harvested";
 					public static LocString DELIVERED_DUPLICANT = string.Format(STRINGS.UI.DELIVERED,
 						ITEM, DUPLICANT);
 					public static LocString DELIVERED_MACHINE = string.Format(STRINGS.UI.DELIVERED,
@@ -98,7 +100,9 @@ namespace PeterHan.ToastControl {
 				public static class TOASTCONTROL {
 					public static LocString BUILD_COMPLETE = "Building construction completed";
 					public static LocString CAPTURE_FAILED = "Critter cannot be wrangled manually";
+					public static LocString CLOTHING_CHANGE = "Clothing changed";
 					public static LocString CRITTER_DROPS = "Materials dropped from critters after death or through excretions";
+					public static LocString CROP_HARVESTED = "Items produced from harvesting crops";
 					public static LocString DAMAGE_INPUT = string.Format(DAMAGESOURCES.
 						NOTIFICATION_TOOLTIP, FRONTEND.TOASTCONTROL.BUILDING, DAMAGESOURCES.
 						BAD_INPUT_ELEMENT);

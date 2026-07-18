@@ -52,28 +52,39 @@ namespace PeterHan.ToastControl {
 		private static readonly IDictionary<string, ShowFunc> SHOW_FUNCS = new
 				Dictionary<string, ShowFunc>() {
 			{ "Klei.AI.AttributeLevel", (c, t) => Options.AttributeIncrease },
+			{ nameof(BaseSquidConfig), ShowCritterPoop },
 			{ nameof(BaseUtilityBuildTool), ShowInsufficient },
 			{ "Beefinery+States", ShowElementRemoved },
 			{ nameof(BuildingHP), ShowBuildingDamage },
 			{ nameof(BuildTool), ShowInsufficient },
 			{ nameof(CaptureTool), (c, t) => Options.CannotCapture },
+			{ nameof(Carvable), ShowItemGained },
+			{ "ClusterTelescope+ClusterTelescopeWorkable", ShowResearchGained },
+			{ nameof(ComplexFabricator), ShowElementDropped },
 			{ nameof(Constructable), (c, t) => Options.BuildingComplete },
 			{ nameof(CopyBuildingSettings), (c, t) => Options.CopySettings },
+			{ nameof(Crop), ShowCropHarvested },
 			{ "CreatureCalorieMonitor+Stomach", ShowCritterPoop },
 			{ nameof(DebugHandler), ShowInvalidLocation },
 			{ nameof(Deconstructable), ShowElementDropped },
-			{ "Klei.AI.EffectInstance", (c, t) => Options.EffectAdded },
+			{ "Klei.AI.EffectInstance", ShowEffectAdded },
 			{ "ElementDropperMonitor+Instance", ShowCritterPoop },
+			{ nameof(Electrobank), (c, t) => Options.DamageOverload },
 			{ nameof(ElementEmitter), ShowElementDropped }, // no uses?
+			{ nameof(FartChore), ShowCritterPoop },
 			{ nameof(FleeStates), (c, t) => Options.Fleeing },
 			{ nameof(FlushToilet), ShowGermsAdded },
+			{ nameof(GunkEmptier), ShowGermsAdded },
+			{ "GunkMonitor+Instance", ShowRadiationRemoved },
 			{ nameof(HarvestDesignatable), (c, t) => Options.HarvestToggle },
+			{ nameof(LoreBearer), ShowResearchGained },
 			{ nameof(MaterialSelector), ShowMaterialChanged },
-			{ nameof(MinionResume), (c, t) => Options.SkillPointEarned },
+			{ nameof(MinionResume), ShowSkillEarned },
 			{ nameof(Moppable), (c, t) => Options.ElementMopped },
 			{ nameof(MopTool), ShowMopError },
 			{ nameof(NuclearResearchCenterWorkable), ShowResearchGained },
 			{ "PeeChore+States", ShowRadiationRemoved },
+			{ nameof(PlantFiberProducer), ShowCropHarvested },
 			{ nameof(ReorderableBuilding), ShowInvalidLocation },
 			{ nameof(ResearchCenter), ShowResearchGained },
 			{ nameof(ResearchPointObject), ShowResearchGained },
@@ -81,17 +92,23 @@ namespace PeterHan.ToastControl {
 			{ nameof(Rottable), ShowFoodRotted },
 			{ nameof(SandboxClearFloorTool), (c, t) => Options.FloorCleared },
 			{ nameof(SandboxSampleTool), ShowInvalidLocation },
-			{ nameof(SeedProducer), ShowItemGained },
+			{ nameof(SandboxStressTool), ShowEffectAdded },
+			{ nameof(SeedProducer), ShowCropHarvested },
+			{ nameof(SeekAndInstallBionicUpgradeChore), ShowSkillEarned },
 			{ nameof(SetLocker), ShowItemGained },
 			{ "Klei.AI.SlimeSickness+SlimeLungComponent+StatesInstance", ShowCritterPoop },
+			{ "SlipperyMonitor+SlipReactable", ShowEffectAdded },
 			{ "Klei.AI.SicknessInstance+StatesInstance", ShowCureOrInfect },
+			{ nameof(SleepClinicPajamas), ShowClothingChange },
 			{ "SolidConsumerMonitor+Instance", ShowElementRemoved },
 			{ nameof(Storage), ShowItemStored },
 			{ nameof(SuperProductive), ShowOverjoyed },
+			{ nameof(Telepad), ShowItemGained },
 			{ nameof(Toilet), ShowGermsAdded },
 			{ nameof(ToiletWorkableUse), ShowRadiationRemoved },
 			{ nameof(UtilityBuildTool), (c, t) => Options.InvalidConnection },
 			{ "VomitChore+States", ShowRadiationRemoved },
+			{ nameof(WearableAccessorizer), ShowClothingChange },
 			{ nameof(WorldDamage), (c, t) => Options.ElementDug }
 		};
 
@@ -132,16 +149,24 @@ namespace PeterHan.ToastControl {
 			return show;
 		}
 
+		private static bool ShowClothingChange(object _, string text) => Options.ClothingChange;
+
 		private static bool ShowCritterPoop(object _, string text) => Options.CritterDrops;
+		
+		private static bool ShowCropHarvested(object _, string text) => Options.CropHarvested;
 
 		private static bool ShowCureOrInfect(object _, string text) {
 			return text.Contains(string.Format(STRINGS.DUPLICANTS.DISEASES.CURED_POPUP, "")) ?
 				Options.DiseaseCure : Options.DiseaseInfect;
 		}
 
-		private static bool ShowElementDropped(object _, string text) => Options.ElementDropped;
+		private static bool ShowEffectAdded(object _, string text) => Options.EffectAdded;
 
-		private static bool ShowElementRemoved(object _, string text) => Options.ElementRemoved;
+		private static bool ShowElementDropped(object _, string text) => Options.
+			ElementDropped;
+
+		private static bool ShowElementRemoved(object _, string text) => Options.
+			ElementRemoved;
 
 		private static bool ShowFoodRotted(object _, string text) => Options.FoodDecayed;
 
@@ -161,7 +186,8 @@ namespace PeterHan.ToastControl {
 				Options.Delivered : Options.PickedUp;
 		}
 
-		private static bool ShowMaterialChanged(object _, string text) => Options.MaterialChanged;
+		private static bool ShowMaterialChanged(object _, string text) => Options.
+			MaterialChanged;
 
 		private static bool ShowMopError(object _, string text) {
 			return (text == STRINGS.UI.TOOLS.MOP.NOT_ON_FLOOR) ? Options.MopNotFloor : Options.
@@ -173,7 +199,10 @@ namespace PeterHan.ToastControl {
 		private static bool ShowRadiationRemoved(object _, string text) => Options.
 			RadiationRemoved;
 
-		private static bool ShowResearchGained(object _, string text) => Options.ResearchGained;
+		private static bool ShowResearchGained(object _, string text) => Options.
+			ResearchGained;
+		
+		private static bool ShowSkillEarned(object _, string text) => Options.SkillPointEarned;
 
 		/// <summary>
 		/// Determines whether a popup should be shown.
