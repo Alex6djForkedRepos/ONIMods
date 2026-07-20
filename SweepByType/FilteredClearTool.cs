@@ -107,16 +107,9 @@ namespace PeterHan.SweepByType {
 			if (TypeSelect != null) {
 				var root = TypeSelect.RootPanel;
 				bool firstTime = TypeSelect.CategoryCount < 1;
-				var si = SaveGame.Instance;
-				TypeSelect.Update();
-				if (firstTime && si != null && si.TryGetComponent(
-						out SavedTypeSelections st)) {
-					var savedTypes = st.GetSavedTypes();
-					// First time, load the user's old settings if available
-					// If nothing at all is selected, then this is probably the first ever load
-					if (savedTypes != null && savedTypes.Count > 0)
-						TypeSelect.SetSelections(savedTypes);
-				}
+				TypeSelect.UpdateAvailable();
+				if (firstTime)
+					TypeSelect.SwitchPreset(-1);
 				root.SetParent(menu.gameObject);
 				root.transform.SetAsFirstSibling();
 				root.SetActive(true);
