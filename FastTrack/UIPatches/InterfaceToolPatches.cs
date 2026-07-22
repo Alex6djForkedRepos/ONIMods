@@ -24,6 +24,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using UnityEngine;
 
+using Intersection = InterfaceTool.Intersection;
 using TranspiledMethod = System.Collections.Generic.IEnumerable<HarmonyLib.CodeInstruction>;
 
 namespace PeterHan.FastTrack.UIPatches {
@@ -83,8 +84,23 @@ namespace PeterHan.FastTrack.UIPatches {
 		/// <summary>
 		/// Avoids allocating a new Comparison every frame.
 		/// </summary>
-		private static readonly Comparison<KSelectable> COMPARE_SELECTABLES =
+		private static readonly Comparison<Intersection> COMPARE_SELECTABLES =
 			CompareSelectables;
+
+		/// <summary>
+		/// Add all of the hits at the minimum distance.
+		/// </summary>
+		/// <param name="seen">The location where the status items will be stored.</param>
+		/// <param name="hits">The existing matches (probably the hover override among others).</param>
+		private static void AddHitsAtMinValue(IDictionary<KSelectable, float> seen,
+				IList<KSelectable> hits) {
+			int n = hits.Count;
+			for (int i = 0; i < n; i++) {
+				var hit = hits[i];
+				if (hit != null)
+					seen[hit] = -100.0f;
+			}
+		}
 
 		/// <summary>
 		/// Adds the intersections of existing status items to the list by distance.
@@ -96,37 +112,32 @@ namespace PeterHan.FastTrack.UIPatches {
 			var intersections = ListPool<InterfaceTool.Intersection, InterfaceTool>.Allocate();
 			// This overload, unlike the List<KSelectable> one, does not do the O(n^2)
 			// comparisons; the original GetObjectUnderCursor call had a condition for
-			// "is it selectable" but GetIntersections already checks that. This overload
-			// calls GetComponent twice unfortunately, but what can we do?
+			// "is it selectable" but GetIntersections already checks that
 			Game.Instance.statusItemRenderer.GetIntersections(xy, intersections);
-			foreach (var intersection in intersections)
+			int n = intersections.Count;
+			for (int i = 0; i < n; i++) {
+				var intersection = intersections[i];
 				// It always is a KSelectable (or is null)
 				if (intersection.component is KSelectable selectable)
 					// Distance is always -100
 					seen[selectable] = intersection.distance;
+			}
 			intersections.Recycle();
 		}
 
 		/// <summary>
-		/// Compares two behaviours to ensure a consistent ordering when cycling through
-		/// info cards.
+		/// Compares two behaviour intersections to ensure a consistent ordering when cycling
+		/// through info cards.
 		/// </summary>
 		/// <param name="x">The first behaviour to compare.</param>
 		/// <param name="y">The second behaviour to compare.</param>
 		/// <returns>negative if the first behaviour is less than the second, positive if the
 		/// first is greater than the second, or 0 otherwise.</returns>
-		private static int CompareSelectables(KMonoBehaviour x, KMonoBehaviour y) {
-			int result;
-			bool yn = y == null;
-			if (x == null)
-				result = yn ? 0 : -1;
-			else if (yn)
-				result = 1;
-			else {
-				result = x.transform.GetPosition().z.CompareTo(y.transform.GetPosition().z);
-				if (result == 0)
-					result = x.GetHashCode().CompareTo(y.GetHashCode());
-			}
+		private static int CompareSelectables(Intersection x, Intersection y) {
+			MonoBehaviour sx = x.component, sy = y.component;
+			int result = sx.transform.GetPosition().z.CompareTo(sy.transform.GetPosition().z);
+			if (result == 0)
+				result = x.GetHashCode().CompareTo(y.GetHashCode());
 			return result;
 		}
 
@@ -136,21 +147,21 @@ namespace PeterHan.FastTrack.UIPatches {
 		/// <param name="cell">The cell to search.</param>
 		/// <param name="coords">The raw mouse coordinates.</param>
 		/// <param name="hits">The location where all hits will be stored.</param>
-		/// <param name="compareSet">The set of objects to compare.</param>
+		/// <param name="intersections">The location where all intersections will be stored.</param>
 		private static void FindSelectables(int cell, Vector3 coords, List<KSelectable> hits,
-				ISet<Component> compareSet) {
+				List<Intersection> intersections) {
 			var gsp = GameScenePartitioner.Instance;
 			var seen = DictionaryPool<KSelectable, float, SelectTool>.Allocate();
 			var xy = new Vector2(coords.x, coords.y);
-			// The override might already be there
-			foreach (var obj in hits)
-				seen[obj] = -100.0f;
+			AddHitsAtMinValue(seen, hits);
 			AddStatusIntersections(seen, xy);
 			var entries = ListPool<ScenePartitionerEntry, SelectTool>.Allocate();
 			Grid.CellToXY(cell, out int x, out int y);
 			gsp.GatherEntries(x, y, 1, 1, gsp.collisionLayer, entries);
-			foreach (var entry in entries)
-				if (entry.obj is KCollider2D collider && collider.Intersects(xy)) {
+			int n = entries.Count;
+			for (int i = 0; i < n; i++)
+				if (entries[i].obj is KCollider2D collider && collider.enabled && collider.
+						Intersects(xy)) {
 					if (!collider.TryGetComponent(out KSelectable selectable))
 						selectable = collider.GetComponentInParent<KSelectable>();
 					if (selectable != null && selectable.IsSelectable) {
@@ -162,16 +173,22 @@ namespace PeterHan.FastTrack.UIPatches {
 					}
 				}
 			entries.Recycle();
-			hits.Clear();
-			foreach (var pair in seen) {
-				var selectable = pair.Key;
-				compareSet.Add(selectable);
-				hits.Add(selectable);
-			}
+			intersections.Clear();
+			foreach (var pair in seen)
+				intersections.Add(new Intersection() {
+					component = pair.Key,
+					distance = pair.Value
+				});
 			seen.Recycle();
 			// Sort the hits; compares fewer objects at the expense of comparing a slightly
 			// different behaviour (the original compares the collider)
-			hits.Sort(COMPARE_SELECTABLES);
+			intersections.Sort(COMPARE_SELECTABLES);
+			n = intersections.Count;
+			hits.Clear();
+			for (int i = 0; i < n; i++)
+				// All will be an instance
+				if (intersections[i].component is KSelectable ks)
+					hits.Add(ks);
 		}
 
 		/// <summary>
@@ -180,12 +197,11 @@ namespace PeterHan.FastTrack.UIPatches {
 		/// <param name="cell">The cell that the cursor occupies.</param>
 		/// <param name="coords">The raw mouse coordinates.</param>
 		/// <param name="hits">The location where the hits will be stored.</param>
+		/// <param name="intersections">The location where all intersections will be stored.</param>
 		private static void GetAllSelectables(int cell, Vector3 coords,
-				 List<KSelectable> hits) {
-			var compareSet = HashSetPool<Component, InterfaceTool>.Allocate();
+				 List<KSelectable> hits, List<Intersection> intersections) {
 			if (Grid.IsVisible(cell))
-				FindSelectables(cell, coords, hits, compareSet);
-			compareSet.Recycle();
+				FindSelectables(cell, coords, hits, intersections);
 		}
 
 		/// <summary>
@@ -195,14 +211,17 @@ namespace PeterHan.FastTrack.UIPatches {
 		/// <param name="hits">The list of sorted hits.</param>
 		/// <param name="layerMask">The mask of objects that should not be selected.</param>
 		/// <returns>The object that would be selected.</returns>
-		private static KSelectable GetFirstSelectable(List<KSelectable> hits, int layerMask) {
+		private static KSelectable GetFirstSelectable(IList<KSelectable> hits, int layerMask) {
 			KSelectable result = null;
+			int n = hits.Count;
 			// hits is already sorted and non-null
-			foreach (var item in hits)
+			for (int i = 0; i < n; i++) {
+				var item = hits[i];
 				if (((1 << item.gameObject.layer) & layerMask) != 0) {
 					result = item;
 					break;
 				}
+			}
 			return result;
 		}
 
@@ -217,16 +236,18 @@ namespace PeterHan.FastTrack.UIPatches {
 				int layerMask, KSelectable lastSelected) {
 			var filteredHits = ListPool<KSelectable, InterfaceTool>.Allocate();
 			KSelectable result = null;
-			int index = -1;
+			int index = -1, n = hits.Count;
 			// hits is already sorted, but if an object is destroyed without changing the
 			// selected tile, some entries could be null
-			foreach (var item in hits)
+			for (int i = 0; i < n; i++) {
+				var item = hits[i];
 				if (item != null && ((1 << item.gameObject.layer) & layerMask) != 0) {
 					if (lastSelected == item)
 						index = filteredHits.Count;
 					filteredHits.Add(item);
 				}
-			int n = filteredHits.Count;
+			}
+			n = filteredHits.Count;
 			if (n == 1)
 				result = filteredHits[0];
 			else if (n > 1)
@@ -309,7 +330,7 @@ namespace PeterHan.FastTrack.UIPatches {
 					if (hoverOverride != null)
 						hits.Add(hoverOverride);
 					// If the items have changed, reset cycle count
-					GetAllSelectables(cell, coords, hits);
+					GetAllSelectables(cell, coords, hits, __instance.intersections);
 					var objectUnderCursor = GetFirstSelectable(hits, __instance.layerMask);
 					__instance.UpdateHoverElements(hits);
 					if (!__instance.hasFocus && hoverOverride == null)
@@ -360,13 +381,17 @@ namespace PeterHan.FastTrack.UIPatches {
 				int cell = Grid.PosToCell(cursor_pos);
 				if (Grid.IsValidCell(cell)) {
 					var hits = __instance.hits;
-					GetAllSelectables(cell, cursor_pos, hits);
-					var target = GetNextSelectable(hits, __instance.layerMask, __instance.selected);
+					__instance.selectedCell = cell;
+					GetAllSelectables(cell, cursor_pos, hits, __instance.intersections);
 					// Try Aze's override
-					var newTarget = __instance.GetObjectUnderCursor<KSelectable>(true);
-					if (newTarget != null)
-						target = newTarget;
+					var target = __instance.GetObjectUnderCursor<KSelectable>(true);
+					if (target == null)
+						target = GetNextSelectable(hits, __instance.layerMask,
+							__instance.selected);
 					__instance.Select(target);
+					// Update the dev tools if they are active
+					DevToolSimDebug.Instance?.SetCell(cell);
+					DevToolNavGrid.Instance?.SetCell(cell);
 				}
 				__instance.selectedCell = cell;
 				return false;
