@@ -389,9 +389,8 @@ namespace PeterHan.FastTrack.UIPatches {
 						target = GetNextSelectable(hits, __instance.layerMask,
 							__instance.selected);
 					__instance.Select(target);
-					// Update the dev tools if they are active
-					DevToolSimDebug.Instance?.SetCell(cell);
-					DevToolNavGrid.Instance?.SetCell(cell);
+					// Updating the dev tools crashes on Mac, but even loading the type will
+					// fail, so just ignore them
 				}
 				__instance.selectedCell = cell;
 				return false;
