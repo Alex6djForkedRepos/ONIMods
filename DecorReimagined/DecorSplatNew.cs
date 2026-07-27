@@ -36,10 +36,13 @@ namespace ReimaginationTeam.DecorRework {
 		internal static readonly int BackwallLayer = (int)PGameUtils.GetObjectLayer(
 			nameof(ObjectLayer.Backwall), ObjectLayer.Backwall);
 
-		// TODO Remove when versions prior to U57-699077 no longer need to be supported
-		private static readonly Tag TAG_DECOR_20 = "Decor20".ToTag();
-
-		private static readonly bool NEEDS_DECOR_20 = PUtil.GameVersion < 699077U;
+		/// <summary>
+		/// Handles changes to the functional status without allocating actions.
+		/// </summary>
+		private static readonly Action<object, object> ON_FUNCTIONAL_CHANGED = (context, data) => {
+			if (context is DecorSplatNew splat && splat != null)
+				splat.OnFunctionalChanged(data);
+		};
 
 		/// <summary>
 		/// Reports if this building is visually behind backwalls like drywall or wallpaper.
@@ -86,6 +89,11 @@ namespace ReimaginationTeam.DecorRework {
 		private float cacheDecor;
 		
 		/// <summary>
+		/// A reference to the currently subscribed functional change callback.
+		/// </summary>
+		private int onFunctionalChanged;
+
+		/// <summary>
 		/// The cells this decor splat affects.
 		/// </summary>
 		private readonly IList<int> cells;
@@ -111,6 +119,11 @@ namespace ReimaginationTeam.DecorRework {
 		private KPrefabID prefabID;
 
 		/// <summary>
+		/// Refreshes decor when the partitioner is called. Spelled correctly!
+		/// </summary>
+		private Action<object> refreshPartitionerCallback;
+
+		/// <summary>
 		/// The solid partitioner used for decor changes;
 		/// </summary>
 		private IntHandle solidChangedPartitioner;
@@ -120,6 +133,7 @@ namespace ReimaginationTeam.DecorRework {
 			cacheDecor = 0.0f;
 			cells = new List<int>(64);
 			layer = -1;
+			onFunctionalChanged = 0;
 			partitioner = IntHandle.InvalidHandle;
 			prefabID = null;
 			provider = null;
@@ -177,8 +191,9 @@ namespace ReimaginationTeam.DecorRework {
 					inst.RefreshAllAt(cell);
 				}
 			}
-			Unsubscribe((int)GameHashes.FunctionalChanged, OnFunctionalChanged);
+			Unsubscribe(ref onFunctionalChanged);
 			base.OnCleanUp();
+			building = null;
 			prefabID = null;
 		}
 
@@ -187,13 +202,20 @@ namespace ReimaginationTeam.DecorRework {
 				RefreshDecor();
 		}
 
+		protected override void OnPrefabInit() {
+			base.OnPrefabInit();
+			TryGetComponent(out provider);
+			TryGetComponent(out prefabID);
+		}
+
 		protected override void OnSpawn() {
 			base.OnSpawn();
-			TryGetComponent(out provider);
-			Subscribe((int)GameHashes.FunctionalChanged, OnFunctionalChanged);
+			// This method happens to work too
+			refreshPartitionerCallback = new Action<object>(OnFunctionalChanged);
+			onFunctionalChanged = Subscribe((int)GameHashes.FunctionalChanged,
+				ON_FUNCTIONAL_CHANGED, this);
 			// Hack: The new Bonbon Tree branch crashes if KPrefabID is referenced, even
 			// transitively, in component initialization (MyCmpGet)!
-			TryGetComponent(out prefabID);
 			if (TryGetComponent(out building)) {
 				var def = building.Def;
 				var inst = DecorCellManager.Instance;
@@ -254,7 +276,7 @@ namespace ReimaginationTeam.DecorRework {
 						extents, gsp.decorProviderLayer, provider.
 						onCollectDecorProvidersCallback);
 					solidChangedPartitioner = gsp.Add("DecorProvider.SplatSolidCheck", obj,
-						extents, gsp.solidChangedLayer, provider.refreshPartionerCallback);
+						extents, gsp.solidChangedLayer, refreshPartitionerCallback);
 					AddDecor(cell, decor, extents);
 					cacheDecor = decor;
 				}
@@ -276,27 +298,6 @@ namespace ReimaginationTeam.DecorRework {
 					(happiness != null && happiness.GetTotalValue() < 0.0f);
 				bool broken = breakStatus != null && breakStatus.IsBroken;
 				RefreshCells(broken, disabled);
-				// Handle rooms which require an item with 20 decor: has to actually be
-				// functional
-				if (NEEDS_DECOR_20) {
-					bool hasTag = prefabID.HasTag(TAG_DECOR_20);
-					bool needsTag = provider.decor.GetTotalValue() >= 20f && !broken &&
-						!disabled;
-					// Do not trigger on buildings with a room tracker, as that could set up an
-					// infinite loop
-					if ((tracker == null || tracker.requirement == RoomTracker.Requirement.
-							TrackingOnly) && hasTag != needsTag) {
-						int pos = Grid.PosToCell(gameObject);
-						// Tag needs to be added/removed
-						if (needsTag)
-							prefabID.AddTag(TAG_DECOR_20);
-						else
-							prefabID.RemoveTag(TAG_DECOR_20);
-						// Force room recalculation
-						if (Grid.IsValidCell(pos))
-							Game.Instance.roomProber.SolidChangedEvent(pos, true);
-					}
-				}
 			}
 		}
 
