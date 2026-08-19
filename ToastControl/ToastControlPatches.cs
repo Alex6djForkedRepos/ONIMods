@@ -100,7 +100,7 @@ namespace PeterHan.ToastControl {
 			"DebugHandler:SpawnMinion",
 			"DebugHandler:OnKeyDown",
 			"FlushToilet:AddDisseaseToWorker",
-			"GunkEmptier:AddDisseaseToWorker",
+			"GunkEmptier+Instance:AddDisseaseToWorker",
 			"GunkMonitor+Instance:ExpellGunk",
 			"Klei.AI.AttributeLevel:LevelUp",
 			"MaterialSelector:AutoSelectAvailableMaterial",
@@ -109,7 +109,7 @@ namespace PeterHan.ToastControl {
 			"SandboxSampleTool:OnLeftClickDown",
 			"SeekAndInstallBionicUpgradeChore:InstallUpgrade",
 			"SuperProductive+<>c:<InitializeStates>b__3_0",
-			"Telepad:SpawnExtraPowerBanks", // 2 hits
+			"Telepad+StatesInstance:SpawnExtraPowerBanks", // 2 hits
 			"Toilet:FlushMultiple",
 			"ToiletWorkableUse:OnCompleteWork",
 			"UtilityBuildTool:ApplyPathToConduitSystem",

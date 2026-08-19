@@ -262,15 +262,17 @@ namespace ReimaginationTeam.DecorRework {
 				if (decor != 0.0f && DecorCellManager.Instance.NoDecorBehindDrywall &&
 						IsHiddenByBackwall())
 					decor = 0.0f;
-				if (decor != 0.0f && (!disabled || decor < 0.0f) && radius > 0) {
+				if (decor != 0.0f && (!disabled || decor < 0.0f) && radius >= 0) {
 					// Decor actually can be applied
 					var area = provider.occupyArea;
 					Extents extents, be = (area == null) ? Extents.OneCell(cell) : area.
 						GetExtents();
 					extents.x = Math.Max(0, be.x - radius);
 					extents.y = Math.Max(0, be.y - radius);
-					extents.width = Math.Min(Grid.WidthInCells - 1, be.width + radius * 2);
-					extents.height = Math.Min(Grid.HeightInCells - 1, be.height + radius * 2);
+					extents.width = Math.Min(Grid.WidthInCells - 1, Math.Max(1,
+						be.width + radius * 2));
+					extents.height = Math.Min(Grid.HeightInCells - 1, Math.Max(1,
+						be.height + radius * 2));
 					// Names are the same as the base game
 					partitioner = gsp.Add("DecorProvider.SplatCollectDecorProviders", obj,
 						extents, gsp.decorProviderLayer, provider.

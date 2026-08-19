@@ -40,7 +40,8 @@ namespace PeterHan.WorkshopProfiles {
 				AddToBuildings = new List<string>(32) {
 					RanchStationConfig.ID,
 					FarmStationConfig.ID,
-					PowerControlStationConfig.ID
+					PowerControlStationConfig.ID,
+					"UnderwaterRanchStation"
 				};
 		}
 

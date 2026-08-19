@@ -34,10 +34,6 @@ namespace PeterHan.WorkshopProfiles {
 	/// Patches which will be applied via annotations for Workshop Profiles.
 	/// </summary>
 	public sealed class WorkshopProfilesPatches : KMod.UserMod2 {
-		// TODO Remove when versions less than U52-640445 no longer need to be supported
-		private static readonly IDetouredField<ChoreConsumerState, KMonoBehaviour> WORKER =
-			PDetours.DetourFieldLazy<ChoreConsumerState, KMonoBehaviour>("worker");
-
 		/// <summary>
 		/// Building IDs that should not have workshop profiles.
 		/// </summary>
@@ -104,8 +100,7 @@ namespace PeterHan.WorkshopProfiles {
 			var state = context.consumerState;
 			KPrefabID prefabID;
 			if (data is WorkshopProfile profile && profile != null && state != null &&
-					WORKER.Get(state) != null &&
-					(prefabID = context.consumerState.prefabid) != null)
+					state.worker != null && (prefabID = context.consumerState.prefabid) != null)
 				allow = profile.IsAllowed(prefabID.InstanceID);
 			return allow;
 		}
@@ -147,15 +142,8 @@ namespace PeterHan.WorkshopProfiles {
 		/// <summary>
 		/// Applied to Chore to add workshop profile conditions to all Work chores.
 		/// </summary>
-		[HarmonyPatch]
+		[HarmonyPatch(typeof(StandardChoreBase), nameof(StandardChoreBase.AddPrecondition))]
 		public static class Chore_AddPrecondition_Patch {
-			internal static MethodBase TargetMethod() {
-				// TODO Remove when versions less than U52-622222 no longer need to be supported
-				var type = PPatchTools.GetTypeSafe(nameof(StandardChoreBase)) ?? typeof(Chore);
-				return type.GetMethodSafe(nameof(Chore.AddPrecondition), false, PPatchTools.
-					AnyArguments);
-			}
-
 			/// <summary>
 			/// Applied after AddPrecondition runs.
 			/// </summary>
