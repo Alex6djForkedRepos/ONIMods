@@ -84,6 +84,7 @@ namespace PeterHan.AirlockDoor {
 		public override BuildingDef CreateBuildingDef() {
 			LocString.CreateLocStringKeys(typeof(AirlockDoorStrings.BUILDING));
 			LocString.CreateLocStringKeys(typeof(AirlockDoorStrings.BUILDINGS));
+			LocString.CreateLocStringKeys(typeof(AirlockDoorStrings.DUPLICANTS));
 			if (AirlockDoorTemplate == null)
 				throw new ArgumentNullException(nameof(AirlockDoorTemplate));
 			var def = AirlockDoorTemplate.CreateDef();

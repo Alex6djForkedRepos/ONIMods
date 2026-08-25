@@ -20,7 +20,6 @@ using KSerialization;
 using PeterHan.PLib.Core;
 using System;
 using UnityEngine;
-using static STRINGS.BUILDING.STATUSITEMS;
 
 namespace PeterHan.AirlockDoor {
 	/// <summary>
@@ -43,7 +42,12 @@ namespace PeterHan.AirlockDoor {
 		/// The layer to check for Duplicants.
 		/// </summary>
 		internal static int minionLayer;
-			
+
+		/// <summary>
+		/// The layer to check for dropped items.
+		/// </summary>
+		internal static int pickupableLayer;
+
 		/// <summary>
 		/// Prevents initialization from multiple threads at once.
 		/// </summary>
@@ -89,6 +93,8 @@ namespace PeterHan.AirlockDoor {
 		private static void StaticInit() {
 			minionLayer = (int)PGameUtils.GetObjectLayer(nameof(ObjectLayer.Minion),
 				ObjectLayer.Minion);
+			pickupableLayer = (int)PGameUtils.GetObjectLayer(nameof(ObjectLayer.
+				Pickupables), ObjectLayer.Pickupables);
 			doorControlState = new StatusItem("CurrentDoorControlState", "BUILDING",
 				"", StatusItem.IconType.Info, NotificationType.Neutral, false, OverlayModes.
 				None.ID) {
@@ -402,6 +408,7 @@ namespace PeterHan.AirlockDoor {
 					1.0f);
 			selectable.SetStatusItem(Db.Get().StatusItemCategories.OperatingEnergy,
 				storedCharge, this);
+			UpdateMeter();
 		}
 
 		/// <summary>

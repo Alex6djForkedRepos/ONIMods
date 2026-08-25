@@ -84,5 +84,17 @@ namespace PeterHan.AirlockDoor {
 				}
 			}
 		}
+
+		public static class DUPLICANTS {
+			public static class MODIFIERS {
+				public class PASSINGAIRLOCK {
+					public static LocString NAME = "Passing through Airlock";
+
+					public static LocString TOOLTIP = "This Duplicant is passing through an " +
+						STRINGS.UI.PRE_KEYWORD + "Airlock Door" + STRINGS.UI.PST_KEYWORD +
+						" and is temporarily insulated from their surroundings";
+				}
+			}
+		}
 	}
 }

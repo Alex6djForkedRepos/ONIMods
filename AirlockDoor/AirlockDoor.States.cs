@@ -18,9 +18,7 @@
 
 using PeterHan.PLib.Core;
 using System;
-using System.Reflection;
 using UnityEngine;
-using PeterHan.PLib.Detours;
 
 namespace PeterHan.AirlockDoor {
 	/// <summary>
@@ -146,6 +144,8 @@ namespace PeterHan.AirlockDoor {
 					}).Exit("ClearContaminants", (smi) => {
 						smi.ClearContaminants();
 						Game.Instance.userMenu.Refresh(smi.master.gameObject);
+					}).Update((smi, _) => {
+						smi.ApplyEffectsToCenter();
 					});
 				vacuum_check.ParamTransition(waitExitLeft, left.exit, IsTrue).
 					ParamTransition(waitExitRight, right.exit, IsTrue).
@@ -344,9 +344,10 @@ namespace PeterHan.AirlockDoor {
 		/// </summary>
 		public sealed class Instance : States.GameInstance {
 			/// <summary>
-			/// The layer to check for dropped items.
+			/// An effect applied to Duplicants that pass through to increase their insulation,
+			/// avoiding the "Chilly Surroundings" debuff.
 			/// </summary>
-			private readonly int pickupableLayer;
+			private readonly Klei.AI.Effect airlockEffect;
 
 			/// <summary>
 			/// The number of samples taken of the tiles just outside the airlock.
@@ -366,10 +367,54 @@ namespace PeterHan.AirlockDoor {
 				pressureSamples;
 
 			public Instance(AirlockDoor door) : base(door) {
-				pickupableLayer = (int)PGameUtils.GetObjectLayer(nameof(ObjectLayer.
-					Pickupables), ObjectLayer.Pickupables);
+				airlockEffect = new Klei.AI.Effect("PassingAirlock",
+					AirlockDoorStrings.DUPLICANTS.MODIFIERS.PASSINGAIRLOCK.NAME,
+					AirlockDoorStrings.DUPLICANTS.MODIFIERS.PASSINGAIRLOCK.TOOLTIP,
+					2.0f, false, false, false, null, -1.0f, 0.0f);
+				// Copied from the atmo suit definition
+				airlockEffect.Add(new Klei.AI.AttributeModifier(Db.Get().Attributes.
+					ThermalConductivityBarrier.Id, 0.2f));
+				airlockEffect.Add(new Klei.AI.AttributeModifier(Db.Get().Attributes.
+					Insulation.Id, 50.0f));
 				pressureSamples = 0;
 				totalPressure = 0.0f;
+			}
+
+			/// <summary>
+			/// Applies the airlock effect to all Duplicants in the middle of the airlock.
+			/// </summary>
+			internal void ApplyEffectsToCenter() {
+				int baseCell = master.building.GetCell();
+				ApplyEffectToMinions(baseCell);
+				ApplyEffectToMinions(Grid.CellAbove(baseCell));
+			}
+
+			/// <summary>
+			/// Checks the cell for a Duplicant and applies the airlock effect if necessary.
+			/// </summary>
+			/// <param name="cell">The cell to check.</param>
+			/// <returns>Whether a Duplicant occupies this cell.</returns>
+			private bool ApplyEffectToMinions(int cell) {
+				bool applied = false;
+				GameObject go;
+				// Probably faster than iterating all Duplicants, as pickupables tend
+				// to get ejected quickly from airlocks
+				if (Grid.IsValidBuildingCell(cell) && (go = Grid.Objects[cell,
+						pickupableLayer]) != null && go.TryGetComponent(out Pickupable
+						pickupable)) {
+					var node = pickupable.objectLayerListItem;
+					while (node != null) {
+						var item = node.gameObject;
+						node = node.nextItem;
+						if (item.TryGetComponent(out MinionBrain _) &&
+								item.TryGetComponent(out Klei.AI.Effects effects)) {
+							applied = true;
+							if (!effects.HasEffect(airlockEffect.IdHash))
+								effects.Add(airlockEffect, false);
+						}
+					}
+				}
+				return applied;
 			}
 
 			/// <summary>
@@ -388,10 +433,11 @@ namespace PeterHan.AirlockDoor {
 			/// </summary>
 			public void CheckDuplicantStatus() {
 				int baseCell = master.building.GetCell();
-				sm.isTraversingLeft.Set(HasMinion(Grid.CellLeft(baseCell)) ||
-					HasMinion(Grid.CellUpLeft(baseCell)), smi);
-				sm.isTraversingRight.Set(HasMinion(Grid.CellRight(baseCell)) ||
-					HasMinion(Grid.CellUpRight(baseCell)), smi);
+				sm.isTraversingLeft.Set(ApplyEffectToMinions(Grid.CellLeft(baseCell)) ||
+					ApplyEffectToMinions(Grid.CellUpLeft(baseCell)), smi);
+				sm.isTraversingRight.Set(ApplyEffectToMinions(Grid.CellRight(baseCell)) ||
+					ApplyEffectToMinions(Grid.CellUpRight(baseCell)), smi);
+				ApplyEffectsToCenter();
 			}
 
 			/// <summary>
@@ -459,16 +505,6 @@ namespace PeterHan.AirlockDoor {
 							Eject(item, newCell);
 					}
 				}
-			}
-
-			/// <summary>
-			/// Checks the cell for a Duplicant.
-			/// </summary>
-			/// <param name="cell">The cell to check.</param>
-			/// <returns>Whether a Duplicant occupies this cell.</returns>
-			private bool HasMinion(int cell) {
-				return Grid.IsValidBuildingCell(cell) && Grid.Objects[cell, minionLayer] !=
-					null;
 			}
 
 			/// <summary>
