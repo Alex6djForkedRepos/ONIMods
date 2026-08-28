@@ -17,6 +17,7 @@
  */
 
 using HarmonyLib;
+using PeterHan.PLib.Core;
 
 namespace PeterHan.FastTrack.PathPatches {
 	/// <summary>
@@ -40,43 +41,72 @@ namespace PeterHan.FastTrack.PathPatches {
 	}
 
 	/// <summary>
-	/// Prevent idle critters that cannot be seen at the moment from moving 95% of the time.
+	/// Reduces the idle movement of critters.
 	/// </summary>
-	[HarmonyPatch(typeof(IdleStates), nameof(IdleStates.MoveToNewCell))]
-	public static class IdleStates_MoveToNewCell_Patch {
-		internal static bool Prepare() => FastTrackOptions.Instance.ReduceCritterIdleMove;
+	internal static class ReduceCritterIdleMoves {
+		/// <summary>
+		/// Applies all critter idle move patches.
+		/// </summary>
+		/// <param name="harmony">The Harmony instance to use for patching.</param>
+		internal static void ApplyPatch(Harmony harmony) {
+			harmony.Patch(typeof(IdleStates), nameof(IdleStates.MoveToNewCell), prefix:
+				new HarmonyMethod(typeof(ReduceCritterIdleMoves),
+				nameof(MoveToNewCellGround_Prefix)));
+			harmony.Patch(typeof(BuzzStates), nameof(BuzzStates.MoveToNewCell), prefix:
+				new HarmonyMethod(typeof(ReduceCritterIdleMoves),
+				nameof(MoveToNewCellAir_Prefix)));
+		}
 
 		/// <summary>
 		/// Called when the move state is entered, go to the loop (=idle) state again if critter
 		/// is not visible (95% of cases).
 		/// </summary>
 		[HarmonyPriority(Priority.Low)]
-		internal static bool Prefix(IdleStates.Instance smi, IdleStates.State ___loop) {
+		internal static bool MoveToNewCellGround_Prefix(IdleStates.Instance smi,
+				IdleStates.State ___loop) {
 			bool skipMove = !GridVisibleArea.GetVisibleArea().Contains(Grid.PosToCell(smi)) &&
 				UnityEngine.Random.Range(1, 100) >= 96;
 			if (skipMove)
 				smi.GoTo(___loop);
 			return !skipMove;
 		}
-	}
-
-	/// <summary>
-	/// Prevent idle Beetas that cannot be seen at the moment from moving 95% of the time.
-	/// </summary>
-	[HarmonyPatch(typeof(BuzzStates), nameof(BuzzStates.MoveToNewCell))]
-	public static class BuzzStates_MoveToNewCell_Patch {
-		internal static bool Prepare() => FastTrackOptions.Instance.ReduceCritterIdleMove;
 
 		/// <summary>
 		/// Called when the move state is entered, go to the idle state again if Beeta
 		/// is not visible (95% of cases).
 		/// </summary>
-		internal static bool Prefix(BuzzStates.Instance smi) {
+		[HarmonyPriority(Priority.Low)]
+		internal static bool MoveToNewCellAir_Prefix(BuzzStates.Instance smi) {
 			bool skipMove = !GridVisibleArea.GetVisibleArea().Contains(Grid.PosToCell(smi)) &&
 				UnityEngine.Random.Range(1, 100) >= 96;
 			if (skipMove)
 				smi.GoTo(smi.sm.idle);
 			return !skipMove;
 		}
+	}
+
+	/// <summary>
+	/// Prevent idle critters that cannot be seen at the moment from moving 95% of the time.
+	/// 
+	/// IdleStates has a bad static initializer that breaks assets/localization if run too
+	/// early, so the patch must be performed manually.
+	/// </summary>
+	[HarmonyPatch(typeof(IdleStates), nameof(IdleStates.MoveToNewCell))]
+	public static class IdleStates_MoveToNewCell_Patch {
+		internal static bool Prepare() => FastTrackOptions.Instance.ReduceCritterIdleMove;
+
+		
+	}
+
+	/// <summary>
+	/// Prevent idle Beetas that cannot be seen at the moment from moving 95% of the time.
+	/// 
+	/// BuzzStates references the broken IdleStates, so it also must be manually patched.
+	/// </summary>
+	[HarmonyPatch(typeof(BuzzStates), nameof(BuzzStates.MoveToNewCell))]
+	public static class BuzzStates_MoveToNewCell_Patch {
+		internal static bool Prepare() => FastTrackOptions.Instance.ReduceCritterIdleMove;
+
+		
 	}
 }

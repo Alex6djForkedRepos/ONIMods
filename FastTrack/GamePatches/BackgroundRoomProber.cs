@@ -17,7 +17,6 @@
  */
 
 using HarmonyLib;
-using PeterHan.FastTrack.CritterPatches;
 using PeterHan.PLib.Core;
 using System;
 using System.Collections.Concurrent;
@@ -276,14 +275,15 @@ namespace PeterHan.FastTrack.GamePatches {
 				if (cells > 0 && cells <= maxRoomSize) {
 					var go = Grid.Objects[cell, (int)ObjectLayer.Building];
 					bool scanPlants = false, scanBuildings = false, dirty = false;
+					if (go == null)
+						go = Grid.Objects[cell, (int)ObjectLayer.AttachableBuilding];
 					if (go != null && go.TryGetComponent(out KPrefabID prefabID)) {
 						// Is this entity already in the list?
-						if (go.TryGetComponent(out Deconstructable _) || prefabID.HasTag(
+						if (prefabID.HasTag(GameTags.RoomProberBuilding) || prefabID.HasTag(
 								REGISTER_ROOM_TAG)) {
 							dirty = AddBuildingToRoom(cavity, prefabID);
 							scanBuildings = true;
-						} else if (prefabID.HasTag(GameTags.Plant) && !prefabID.HasTag(
-								GameTags.PlantBranch)) {
+						} else if (prefabID.HasTag(GameTags.Plant)) {
 							dirty = AddPlantToRoom(cavity, prefabID);
 							scanPlants = true;
 						}

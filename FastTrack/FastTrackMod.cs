@@ -74,6 +74,8 @@ namespace PeterHan.FastTrack {
 				UIPatches.ClusterMapScreenPatches.LoadSprites();
 			if (options.FlattenAverages)
 				CritterPatches.FertilizerMonitorPatches.Init();
+			if (options.ReduceCritterIdleMove)
+				PathPatches.ReduceCritterIdleMoves.ApplyPatch(harmony);
 		}
 
 		/// <summary>
