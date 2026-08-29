@@ -60,6 +60,25 @@ namespace PeterHan.StockBugFix {
 		}
 
 		/// <summary>
+		/// Fixes "Long Commutes" by properly counting Store and Supply as work time (at least
+		/// while carrying the item).
+		/// 
+		/// The target is in an annoying compiler generated class:
+		/// System.Void ChoreDriver/States::<InitializeStates>b__6_3(ChoreDriver/StatesInstance,System.Single)
+		/// </summary>
+		/// <param name="instance">The Harmony instance to use for patching.</param>
+		private static void FixLongCommutes(Harmony instance) {
+			var targetMethod = typeof(ChoreDriver.States).GetMethodSafe(
+				"<InitializeStates>b__6_3", false, typeof(ChoreDriver.StatesInstance),
+				typeof(float));
+			if (targetMethod == null)
+				PUtil.LogWarning("Unable to patch Long Commutes");
+			else
+				instance.Patch(targetMethod, transpiler: new HarmonyMethod(
+					typeof(StockBugsPatches), nameof(LongCommutesTranspiler)));
+		}
+
+		/// <summary>
 		/// Fixes the integer overflow and incorrect rounding on large tile masses.
 		/// </summary>
 		/// <param name="instance">The Harmony instance to use for patching.</param>
@@ -164,7 +183,29 @@ namespace PeterHan.StockBugFix {
 				string key) {
 			return (lastValue = ALREADY_DISPLAYED.Add(key) ? startingLevels[key] : 0);
 		}
+
+		/// <summary>
+		/// Improves "Long Commutes" by reporting true only if the Duplicant is moving and not
+		/// carrying something, so Store/Supply chores count as work time.
+		/// </summary>
+		/// <param name="navigator">The Duplicant to check.</param>
+		/// <returns>true if and only if they are moving and carrying something.</returns>
+		private static bool IsMovingAndNotHoldingItem(Navigator navigator) {
+			bool moving = navigator.IsMoving();
+			if (moving && navigator.TryGetComponent(out Storage storage))
+				moving = storage.items.Count == 0;
+			return moving;
+		}
 		
+		/// <summary>
+		/// Applied to the compiler generated ChoreDriver delegate method to count time
+		/// carrying an item as work time.
+		/// </summary>
+		private static TranspiledMethod LongCommutesTranspiler(TranspiledMethod method) {
+			return PPatchTools.ReplaceMethodCallSafe(method, typeof(Navigator).GetMethodSafe(nameof(Navigator.IsMoving), false),
+				typeof(StockBugsPatches).GetMethodSafe(nameof(IsMovingAndNotHoldingItem), true, typeof(Navigator)));
+		}
+
 		/// <summary>
 		/// Applied to HoverTextHelper to fix the integer overflow error on huge masses.
 		/// </summary>
@@ -250,6 +291,7 @@ namespace PeterHan.StockBugFix {
 			pm.RegisterPatchClass(typeof(StockBugsPatches));
 			pm.RegisterPatchClass(typeof(SweepFixPatches));
 			FixModUpdateRace(instance);
+			FixLongCommutes(instance);
 			PRegistry.PutData("Bugs.TepidizerPulse", true);
 			PRegistry.PutData("Bugs.TraitExclusionSpacedOut", true);
 			PRegistry.PutData("Bugs.TropicalPacuRooms", true);
@@ -264,6 +306,7 @@ namespace PeterHan.StockBugFix {
 			 * }
 			 */
 			PRegistry.PutData("Bugs.FreeGridSpace", true);
+			PRegistry.PutData("Bugs.ReleaseOverlayTextures", true);
 			new POptions().RegisterOptions(this, typeof(StockBugFixOptions));
 			new PVersionCheck().Register(this, new SteamVersionChecker());
 			ALREADY_DISPLAYED.Clear();
@@ -515,6 +558,28 @@ namespace PeterHan.StockBugFix {
 					cell++;
 				}
 				cell += stride;
+			}
+		}
+	}
+
+	/// <summary>
+	/// Applied to MultipleRenderTargetProxy to properly destroy the copy textures to avoid a
+	/// large memory leak.
+	/// </summary>
+	[HarmonyPatch(typeof(MultipleRenderTargetProxy), "CreateRenderTarget")]
+	public static class MultipleRenderTargetProxy_CreateRenderTarget_Patch {
+		/// <summary>
+		/// Applied before CreateRenderTarget runs.
+		/// </summary>
+		internal static void Prefix(MultipleRenderTargetProxy __instance) {
+			var copies = __instance.TexturesCopies;
+			int n = copies.Length;
+			for (int i = 0; i < n; i++) {
+				var texture = copies[i];
+				if (texture != null) {
+					texture.DestroyRenderTexture();
+					copies[i] = null;
+				}
 			}
 		}
 	}
